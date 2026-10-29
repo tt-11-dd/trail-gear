@@ -508,6 +508,7 @@ function openGearDetailModal(gearId) {
     }
   };
 
+  modal.style.zIndex = '99999';
   modal.classList.remove('hidden');
 }
 

@@ -156,7 +156,7 @@
 
     .sticker-entity.new-arrival {
       animation: newArrivalDrop 0.82s cubic-bezier(0.18, 0.9, 0.32, 1.2) forwards !important;
-      z-index: 9999 !important;
+      z-index: 60 !important;
     }
 
     .sticker-entity.settling {
@@ -166,7 +166,7 @@
     /* 拖拽时的悬浮立体光影 */
     .sticker-entity.dragging {
       cursor: grabbing !important;
-      z-index: 9999 !important;
+      z-index: 70 !important;
       filter: drop-shadow(0 28px 34px rgba(20, 15, 10, 0.32)) !important;
       transition: filter 0.15s ease-out;
       pointer-events: auto;
@@ -439,45 +439,45 @@
       <input type="file" id="image-file-input" accept="image/*" class="hidden">
     </section>
 
-  </div>
+    <!-- 贴纸点击查看详情弹窗 (Apple Bottom Sheet 风格，最高层级 z-[99999]，绝对覆盖所有贴纸) -->
+    <div id="modal-gear-detail" class="absolute inset-0 bg-black/55 backdrop-blur-sm z-[99999] flex items-end justify-center hidden" onclick="closeModal('modal-gear-detail')">
+      <div class="bg-white w-full rounded-t-3xl p-6 shadow-2xl space-y-4 transform transition-all duration-300 z-[100000]" onclick="event.stopPropagation()">
+        <div class="w-10 h-1 bg-stone-300 rounded-full mx-auto -mt-2 mb-2"></div>
+        
+        <!-- 居中贴纸大图 -->
+        <div class="h-48 bg-stone-50 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden border border-stone-200/80">
+          <img id="detail-gear-img" src="" class="max-h-full max-w-full object-contain filter drop-shadow-xl" alt="">
+        </div>
 
-  <!-- 贴纸点击查看详情弹窗 (Apple Bottom Sheet 风格) -->
-  <div id="modal-gear-detail" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center hidden" onclick="closeModal('modal-gear-detail')">
-    <div class="bg-white w-full max-w-sm rounded-t-3xl p-6 shadow-2xl space-y-4 transform transition-all duration-300" onclick="event.stopPropagation()">
-      <div class="w-10 h-1 bg-stone-300 rounded-full mx-auto -mt-2 mb-2"></div>
-      
-      <!-- 居中贴纸大图 -->
-      <div class="h-48 bg-stone-50 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden border border-stone-200/80">
-        <img id="detail-gear-img" src="" class="max-h-full max-w-full object-contain filter drop-shadow-xl" alt="">
-      </div>
-
-      <!-- 装备详情信息 -->
-      <div class="space-y-2">
-        <div class="flex justify-between items-start">
-          <div>
-            <p id="detail-gear-brand" class="text-xs font-bold text-clay-500 uppercase tracking-wider"></p>
-            <h3 id="detail-gear-name" class="text-lg font-black text-stone-900"></h3>
+        <!-- 装备详情信息 -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-start">
+            <div>
+              <p id="detail-gear-brand" class="text-xs font-bold text-clay-500 uppercase tracking-wider"></p>
+              <h3 id="detail-gear-name" class="text-lg font-black text-stone-900"></h3>
+            </div>
+            <span id="detail-gear-weight" class="text-sm font-black text-pine-800 bg-pine-800/10 px-2.5 py-1 rounded-lg"></span>
           </div>
-          <span id="detail-gear-weight" class="text-sm font-black text-pine-800 bg-pine-800/10 px-2.5 py-1 rounded-lg"></span>
+
+          <!-- 备注展示 -->
+          <div id="detail-gear-desc-wrap" class="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 hidden">
+            <p class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">装备备注</p>
+            <p id="detail-gear-desc" class="text-xs text-stone-700 leading-relaxed"></p>
+          </div>
         </div>
 
-        <!-- 备注展示 -->
-        <div id="detail-gear-desc-wrap" class="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 hidden">
-          <p class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">装备备注</p>
-          <p id="detail-gear-desc" class="text-xs text-stone-700 leading-relaxed"></p>
+        <!-- 操作按钮 -->
+        <div class="pt-2 flex space-x-2.5">
+          <button id="delete-gear-btn" class="flex-1 py-3 text-xs text-red-600 font-bold bg-red-50 hover:bg-red-100 rounded-xl transition">
+            从贴纸墙撕下删除
+          </button>
+          <button onclick="closeModal('modal-gear-detail')" class="flex-1 py-3 text-xs text-stone-700 font-bold bg-stone-100 hover:bg-stone-200 rounded-xl transition">
+            完成
+          </button>
         </div>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="pt-2 flex space-x-2.5">
-        <button id="delete-gear-btn" class="flex-1 py-3 text-xs text-red-600 font-bold bg-red-50 hover:bg-red-100 rounded-xl transition">
-          从贴纸墙撕下删除
-        </button>
-        <button onclick="closeModal('modal-gear-detail')" class="flex-1 py-3 text-xs text-stone-700 font-bold bg-stone-100 hover:bg-stone-200 rounded-xl transition">
-          完成
-        </button>
       </div>
     </div>
+
   </div>
 
   <script src="app.js"></script>
