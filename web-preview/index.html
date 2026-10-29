@@ -277,28 +277,46 @@
           </div>
         </div>
       </section>
+    </main>
 
-      <!-- ================= 页面 3：生成贴纸预览 & 填写 4 项表单 ================= -->
-      <section id="view-maker" class="p-4 pb-28 space-y-3.5 hidden">
-        <div class="flex items-center justify-between pb-1">
-          <div class="flex items-center gap-2">
-            <button onclick="switchView('closet')" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition border border-stone-200 shadow-2xs" title="取消并返回首页">
-              <i class="fa-solid fa-chevron-left text-xs"></i>
-            </button>
-            <div>
-              <h2 class="text-base font-black text-stone-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-sparkles text-pine-800"></i> 贴纸已生成
-              </h2>
-              <p class="text-[11px] text-stone-500">填写 4 项信息，一键保存并掉落至收纳垫</p>
-            </div>
-          </div>
-          <button onclick="openCameraView()" class="px-2.5 py-1.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 flex items-center gap-1 hover:bg-stone-200 text-xs font-bold transition" title="重新拍摄">
-            <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i> 重拍
-          </button>
+    <!-- 高定质感悬浮按钮：拍照做贴纸 (深色钛金快门胶囊) -->
+    <div id="home-action-bar" class="absolute bottom-6 inset-x-0 flex justify-center z-30 pointer-events-none">
+      <button onclick="openCameraView()" 
+        class="group pointer-events-auto flex items-center gap-3 pl-3.5 pr-6 py-2.5 rounded-full bg-stone-900/95 hover:bg-black text-white shadow-[0_16px_36px_-6px_rgba(25,20,15,0.35)] border border-stone-700/60 backdrop-blur-xl transition-all duration-300 transform hover:scale-[1.03] active:scale-95">
+        <!-- 镜头快门微动标 -->
+        <span class="w-8 h-8 rounded-full bg-gradient-to-tr from-stone-800 to-stone-700 border border-stone-500/40 flex items-center justify-center text-amber-200/90 shadow-inner group-hover:rotate-45 transition-transform duration-500">
+          <i class="fa-solid fa-camera text-xs"></i>
+        </span>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-black tracking-widest text-stone-100 uppercase">拍照做贴纸</span>
+          <span class="text-[8.5px] text-stone-400 font-mono tracking-wider -mt-0.5">CAMERA TO STICKER</span>
         </div>
+        <i class="fa-solid fa-arrow-right text-[10px] text-stone-400 group-hover:text-white transition-colors ml-0.5"></i>
+      </button>
+    </div>
 
+    <!-- ================= 全屏贴纸制作与表单页面 (完全覆盖整个手机视口，不被顶部顶栏遮挡) ================= -->
+    <section id="view-maker" class="absolute inset-0 bg-white text-stone-900 z-40 flex flex-col justify-between overflow-y-auto no-scrollbar hidden">
+      <!-- 顶部沉浸式导航栏 (预留刘海/灵动岛安全区 pt-12) -->
+      <div class="px-5 pt-12 pb-3.5 border-b border-stone-100 flex items-center justify-between bg-white/95 backdrop-blur-md sticky top-0 z-30">
+        <button onclick="switchView('closet')" class="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition border border-stone-200/80 shadow-2xs" title="取消并返回首页">
+          <i class="fa-solid fa-chevron-left text-sm"></i>
+        </button>
+        <div class="text-center">
+          <h2 class="text-sm font-black text-stone-900 tracking-wide flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-sparkles text-pine-800"></i> 贴纸制作完成
+          </h2>
+          <p class="text-[10px] text-stone-400 font-medium">确认贴纸效果并完善 4 项装备信息</p>
+        </div>
+        <button onclick="openCameraView()" class="px-3 py-1.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 flex items-center gap-1.5 hover:bg-stone-200 text-xs font-bold transition" title="重新拍摄">
+          <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i> 重拍
+        </button>
+      </div>
+
+      <!-- 中间滚动表单区 -->
+      <div class="p-4 space-y-4 flex-1">
         <!-- 生成好的白色描边贴纸展示区 (1:1 正方形纯白极简衬底) -->
-        <div class="w-full max-w-[280px] aspect-square mx-auto bg-stone-50 border-2 border-dashed border-stone-200 rounded-3xl flex items-center justify-center p-4 relative overflow-hidden shadow-inner">
+        <div class="w-64 h-64 max-w-[260px] aspect-square mx-auto bg-[#FAFAFA] border-2 border-dashed border-stone-200 rounded-3xl flex items-center justify-center p-3 relative overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
           <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain filter drop-shadow-xl"></canvas>
           <div id="upload-placeholder" class="text-center p-4 hidden">
             <p class="text-xs text-stone-500">正在生成贴纸...</p>
@@ -335,36 +353,20 @@
               class="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
           </div>
         </div>
+      </div>
 
-        <!-- 提交与关闭操作区 -->
-        <div class="sticky bottom-2 inset-x-0 pt-2 z-40 space-y-2">
-          <button id="save-gear-btn" onclick="saveGearFromMaker()" 
-            class="w-full py-3.5 bg-stone-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl transition flex items-center justify-center gap-2 active:scale-98 border border-stone-700">
-            <i class="fa-solid fa-sparkles text-amber-300"></i> 生成贴纸并放入装备垫
-          </button>
-          <button onclick="switchView('closet')" 
-            class="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 border border-stone-200">
-            <i class="fa-solid fa-xmark text-xs"></i> 放弃并返回首页
-          </button>
-        </div>
-      </section>
-    </main>
-
-    <!-- 高定质感悬浮按钮：拍照做贴纸 (深色钛金快门胶囊) -->
-    <div id="home-action-bar" class="absolute bottom-6 inset-x-0 flex justify-center z-30 pointer-events-none">
-      <button onclick="openCameraView()" 
-        class="group pointer-events-auto flex items-center gap-3 pl-3.5 pr-6 py-2.5 rounded-full bg-stone-900/95 hover:bg-black text-white shadow-[0_16px_36px_-6px_rgba(25,20,15,0.35)] border border-stone-700/60 backdrop-blur-xl transition-all duration-300 transform hover:scale-[1.03] active:scale-95">
-        <!-- 镜头快门微动标 -->
-        <span class="w-8 h-8 rounded-full bg-gradient-to-tr from-stone-800 to-stone-700 border border-stone-500/40 flex items-center justify-center text-amber-200/90 shadow-inner group-hover:rotate-45 transition-transform duration-500">
-          <i class="fa-solid fa-camera text-xs"></i>
-        </span>
-        <div class="flex flex-col text-left">
-          <span class="text-xs font-black tracking-widest text-stone-100 uppercase">拍照做贴纸</span>
-          <span class="text-[8.5px] text-stone-400 font-mono tracking-wider -mt-0.5">CAMERA TO STICKER</span>
-        </div>
-        <i class="fa-solid fa-arrow-right text-[10px] text-stone-400 group-hover:text-white transition-colors ml-0.5"></i>
-      </button>
-    </div>
+      <!-- 底部固定吸底操作栏 -->
+      <div class="p-4 pb-8 border-t border-stone-100 bg-white/95 backdrop-blur-md space-y-2 sticky bottom-0 z-30">
+        <button id="save-gear-btn" onclick="saveGearFromMaker()" 
+          class="w-full py-3.5 bg-stone-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl transition flex items-center justify-center gap-2 active:scale-98 border border-stone-700">
+          <i class="fa-solid fa-sparkles text-amber-300"></i> 生成贴纸并放入装备垫
+        </button>
+        <button onclick="switchView('closet')" 
+          class="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 border border-stone-200">
+          <i class="fa-solid fa-xmark text-xs"></i> 放弃并返回首页
+        </button>
+      </div>
+    </section>
 
     <!-- ================= 全屏实时拍照取景页面 (完全覆盖整个手机视口，沉浸式体验，绝无遮挡) ================= -->
     <section id="view-camera" class="absolute inset-0 bg-stone-950 text-white z-50 flex flex-col justify-between hidden">
@@ -382,19 +384,33 @@
         </button>
       </div>
 
-      <!-- 中间实时相机取景画面 (沉浸式黑色背景 + 正方形取景框) -->
+      <!-- 中间实时相机取景画面 (沉浸式全屏背景 + 正方形居中取景框) -->
       <div class="flex-1 relative flex items-center justify-center overflow-hidden mx-3 my-1 rounded-3xl bg-stone-900 border border-stone-800">
-        <video id="camera-video" playsinline autoplay muted class="w-full h-full object-cover"></video>
+        <!-- 视频铺满整个取景区域背景 -->
+        <video id="camera-video" playsinline autoplay muted class="absolute inset-0 w-full h-full object-cover"></video>
         
-        <!-- 1:1 正方形取景框 (带遮罩暗角 + 纯白精密准星四角) -->
-        <div id="camera-target-box" class="w-[280px] h-[280px] max-w-[85%] max-h-[85%] aspect-square pointer-events-none border-2 border-white/40 rounded-3xl flex items-center justify-center relative shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
+        <!-- 1:1 正方形取景框 (绝对定位居中，带遮罩暗角 + 纯白精密准星四角) -->
+        <div id="camera-target-box" class="absolute w-[280px] h-[280px] aspect-square pointer-events-none border-2 border-white/50 rounded-3xl flex items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] z-10">
           <div class="w-8 h-8 border-t-2 border-l-2 border-white absolute top-0 left-0 rounded-tl-xl"></div>
           <div class="w-8 h-8 border-t-2 border-r-2 border-white absolute top-0 right-0 rounded-tr-xl"></div>
           <div class="w-8 h-8 border-b-2 border-l-2 border-white absolute bottom-0 left-0 rounded-bl-xl"></div>
           <div class="w-8 h-8 border-b-2 border-r-2 border-white absolute bottom-0 right-0 rounded-br-xl"></div>
           <i class="fa-solid fa-plus text-white/50 text-sm"></i>
-          <span class="absolute -bottom-6 text-[10px] font-mono tracking-widest text-white/60 uppercase">1 : 1 SQUARE FRAME</span>
+          <span class="absolute -bottom-6 text-[10px] font-mono tracking-widest text-white/70 uppercase">1 : 1 SQUARE FRAME</span>
         </div>
+
+        <!-- 模拟闪光灯反馈层 -->
+        <div id="camera-flash" class="absolute inset-0 bg-white transition-opacity duration-150 pointer-events-none hidden z-20"></div>
+
+        <!-- 无摄像头时的友好引导提示 -->
+        <div id="camera-fallback-tip" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-stone-900/90 hidden z-20">
+          <div class="w-14 h-14 rounded-2xl bg-white/10 text-amber-300 flex items-center justify-center text-2xl mb-3">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <p class="text-sm font-bold text-stone-100">点击下方快门或相册选图</p>
+          <p class="text-xs text-stone-400 mt-1 max-w-[200px]">可直接调用设备原生相机拍照或选择照片生成贴纸</p>
+        </div>
+      </div>
 
         <!-- 模拟闪光灯反馈层 -->
         <div id="camera-flash" class="absolute inset-0 bg-white transition-opacity duration-150 pointer-events-none hidden"></div>

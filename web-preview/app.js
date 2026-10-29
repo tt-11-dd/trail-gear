@@ -935,10 +935,10 @@ function switchView(view) {
     homeActionBar?.classList.add('hidden');
   } else if (view === 'maker') {
     stopCamera();
-    viewCloset?.classList.add('hidden');
     viewCamera?.classList.add('hidden');
     viewMaker?.classList.remove('hidden');
     homeActionBar?.classList.add('hidden');
+    if (viewMaker) viewMaker.scrollTop = 0;
   }
 
   if (mainContent) mainContent.scrollTop = 0;
