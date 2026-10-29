@@ -203,9 +203,9 @@ class _GearClosetScreenState extends State<GearClosetScreen> {
     final kgStr = (_totalWeightGrams / 1000).toStringAsFixed(1);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F0E8),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F0E8),
+        backgroundColor: Colors.white,
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +234,7 @@ class _GearClosetScreenState extends State<GearClosetScreen> {
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1A382B)),
               ),
               backgroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD5D0C3)),
+              side: const BorderSide(color: Color(0xFFE5E7EB)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               onPressed: () => setState(() => _isTidyGrid = !_isTidyGrid),
             ),
@@ -285,9 +285,9 @@ class _GearClosetScreenState extends State<GearClosetScreen> {
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF6F2EA),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(26),
-                                border: Border.all(color: const Color(0xFFD5D0C3), width: 1.5),
+                                border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(26),

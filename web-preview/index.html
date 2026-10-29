@@ -31,8 +31,8 @@
   </script>
   <style>
     body {
-      background-color: #E5E0D5;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+      background-color: #F4F5F7;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", sans-serif;
       -webkit-font-smoothing: antialiased;
       user-select: none;
     }
@@ -42,19 +42,19 @@
       height: 870px;
       max-height: 96vh;
       border-radius: 46px;
-      box-shadow: 0 25px 60px -15px rgba(35, 30, 25, 0.25), 0 0 0 10px #D5D0C3, 0 0 0 12px #BFBAAC;
+      box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.08), 0 0 0 6px #E5E7EB, 0 0 0 8px #D1D5DB;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       position: relative;
-      background: #F4F0E8;
+      background: #FFFFFF;
     }
-    /* 户外装备桌面网格质感画布 */
+    /* 纯白极简桌面微网格画布 */
     .sticker-board {
-      background-color: #F4F0E8;
+      background-color: #FFFFFF;
       background-image: 
-        linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+        linear-gradient(to right, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
       background-size: 20px 20px;
       min-height: 100%;
     }
@@ -102,7 +102,7 @@
     .scattered-board {
       position: relative;
       width: 100%;
-      min-height: 560px;
+      min-height: 200px;
       touch-action: pan-y;
     }
 
@@ -183,7 +183,7 @@
       transform: scale(0.96);
     }
     .frosted-glass {
-      background: rgba(244, 240, 232, 0.9);
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
@@ -241,38 +241,38 @@
     <main class="flex-1 overflow-y-auto no-scrollbar relative sticker-board" id="main-content">
       
       <!-- ================= 页面 1：贴纸展示墙 (核心主页) ================= -->
-      <section id="view-closet" class="p-3 pb-36 min-h-full block">
+      <section id="view-closet" class="p-3 pb-28 min-h-full block">
         <!-- 桌面提示与状态 -->
         <div class="flex items-center justify-between text-[11px] text-stone-500 font-medium px-1 mb-2 select-none" id="closet-sub-bar">
           <span class="flex items-center gap-1.5 text-stone-700 font-bold">
             <i class="fa-solid fa-hand-pointer text-[10px] text-pine-800"></i>
             <span id="closet-hint-text">拖动贴纸随意摆放 · 点击查看详情</span>
           </span>
-          <span class="text-[10px] bg-stone-200/80 text-stone-600 px-2.5 py-0.5 rounded-full font-bold" id="closet-mode-tag">
+          <span class="text-[10px] bg-stone-100 text-stone-600 px-2.5 py-0.5 rounded-full font-bold border border-stone-200/60" id="closet-mode-tag">
             随性散落
           </span>
         </div>
 
-        <!-- 营地装备收纳垫框 (Bounded Camp Mat Frame) -->
-        <div id="camp-mat-frame" class="relative rounded-[30px] bg-[#F6F2EA] border-2 border-dashed border-stone-300/80 p-3 pb-10 shadow-inner min-h-[500px] overflow-visible transition-all">
+        <!-- 营地装备收纳垫框 (纯白极简收纳垫，高度随贴纸自适应，绝不遮挡底部按钮) -->
+        <div id="camp-mat-frame" class="relative rounded-[26px] bg-white border-2 border-dashed border-stone-200 p-3 pb-3 shadow-[0_2px_12px_rgba(0,0,0,0.02)] min-h-[200px] overflow-visible transition-all">
           <!-- 垫子顶部状态线 -->
-          <div class="flex justify-between items-center text-[10px] font-mono text-stone-400 select-none pb-2 border-b border-stone-200/60 mb-2">
-            <span class="flex items-center gap-1.5 font-bold tracking-wider text-stone-600">
+          <div class="flex justify-between items-center text-[10px] font-mono text-stone-400 select-none pb-2 border-b border-stone-100 mb-2">
+            <span class="flex items-center gap-1.5 font-bold tracking-wider text-stone-700">
               <i class="fa-solid fa-rug text-pine-800"></i> 装备收纳垫 · GEAR MAT
             </span>
-            <span id="tray-stat-pill" class="bg-stone-200/80 text-stone-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+            <span id="tray-stat-pill" class="bg-stone-50 text-stone-600 border border-stone-200/60 px-2 py-0.5 rounded-full font-bold text-[9px]">
               0 件贴纸
             </span>
           </div>
 
           <!-- 贴纸物理容器 (严格约束在垫子安全框内) -->
-          <div id="stickers-container" class="relative w-full min-h-[440px]">
+          <div id="stickers-container" class="relative w-full min-h-[160px]">
             <!-- 动态注入贴纸元素 -->
           </div>
 
           <!-- 框内底部微水印 -->
-          <div class="pt-3 pb-1 text-center pointer-events-none select-none border-t border-stone-200/40 mt-3">
-            <span class="text-[9px] font-mono tracking-widest text-stone-400 uppercase opacity-60">TRAIL GEAR · CAMPING MAT ZONE</span>
+          <div class="pt-2 pb-1 text-center pointer-events-none select-none border-t border-stone-100 mt-2">
+            <span class="text-[9px] font-mono tracking-widest text-stone-300 uppercase">TRAIL GEAR · CAMPING MAT ZONE</span>
           </div>
         </div>
       </section>
@@ -363,8 +363,8 @@
           </button>
         </div>
 
-        <!-- 生成好的白色描边贴纸大图展示 (营地浅色底) -->
-        <div class="w-full h-44 bg-[#F6F2EA] border-2 border-dashed border-stone-300 rounded-3xl flex items-center justify-center p-3 relative overflow-hidden shadow-inner">
+        <!-- 生成好的白色描边贴纸大图展示 (纯白极简衬底) -->
+        <div class="w-full h-44 bg-stone-50 border-2 border-dashed border-stone-200 rounded-3xl flex items-center justify-center p-3 relative overflow-hidden shadow-inner">
           <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain filter drop-shadow-lg"></canvas>
           <div id="upload-placeholder" class="text-center p-4 hidden">
             <p class="text-xs text-stone-500">正在生成贴纸...</p>

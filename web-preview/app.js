@@ -179,9 +179,12 @@ function getOrGenerateStickerPosition(gear, idx, total, forceRefresh = false) {
     if (existing.x !== undefined && existing.y !== undefined && existing.rot !== undefined) {
       existing.x = Math.max(10, Math.min(Math.max(160, trayWidth - 146), existing.x));
       // 自动修复老数据：如果贴纸之前掉得太低被底部按钮挡住，立即校准至安全可视区！
-      if (idx === 0 && existing.y > 160) existing.y = 16;
-      if (idx === 1 && existing.y > 180) existing.y = 24;
-      if (idx === 2 && existing.y > 230) existing.y = 145;
+      if (idx === 0 && existing.y > 150) existing.y = 16;
+      if (idx === 1 && existing.y > 170) existing.y = 24;
+      if (idx === 2 && existing.y > 200) existing.y = 135;
+      if (idx >= 3 && existing.y > (Math.floor(idx / 2) * 125 + 40)) {
+        existing.y = Math.floor(idx / 2) * 125 + 20;
+      }
       return existing;
     }
   }
@@ -190,17 +193,17 @@ function getOrGenerateStickerPosition(gear, idx, total, forceRefresh = false) {
   const col = idx % 2;
   const row = Math.floor(idx / 2);
   
-  const jitterX = Math.round((Math.random() * 14 - 7));
-  const jitterY = Math.round((Math.random() * 14 - 7));
+  const jitterX = Math.round((Math.random() * 12 - 6));
+  const jitterY = Math.round((Math.random() * 12 - 6));
 
   // 左列 14~28px，右列 168~182px (严密约束在垫子框左右边框内)
   const rawX = col === 0 ? (14 + Math.random() * 14 + jitterX) : (168 + Math.random() * 14 + jitterX);
-  // 适度紧凑行距 (130px)，前两行贴纸（前4件）保证严格在 220px 黄金安全区内，绝不落入底部按钮区！
-  const rawY = row * 130 + 14 + jitterY;
+  // 紧凑行距 (125px)，前两行贴纸（前4件）保证严格在 180px 黄金安全区内，绝不落入底部按钮区！
+  const rawY = row * 125 + 14 + jitterY;
 
   const posX = Math.max(10, Math.min(Math.max(160, trayWidth - 148), Math.round(rawX)));
   const posY = row < 2 
-    ? Math.max(10, Math.min(220, Math.round(rawY)))
+    ? Math.max(10, Math.min(175, Math.round(rawY)))
     : Math.max(10, Math.round(rawY));
 
   // 从丰富角度池中取样，消除单一角度
@@ -231,7 +234,7 @@ function renderStickersCanvas(isTriggerDrop = false) {
   }
 
   if (state.gears.length === 0) {
-    container.className = 'relative flex flex-col items-center justify-center py-20 text-stone-400';
+    container.className = 'relative flex flex-col items-center justify-center py-16 text-stone-400';
     container.style.height = 'auto';
     container.innerHTML = `
       <i class="fa-solid fa-rug text-4xl mb-3 opacity-30 text-stone-500"></i>
@@ -269,7 +272,7 @@ function renderStickersCanvas(isTriggerDrop = false) {
     // 【随性散落手账桌面模式】：重力掉落弹性质感 + 多角度自然摆放 + 任意拖动
     container.className = 'scattered-board transition-all duration-300';
     
-    let maxY = 420;
+    let maxY = 120;
     const htmlCards = state.gears.map((g, idx) => {
       const pos = getOrGenerateStickerPosition(g, idx, state.gears.length);
       if (pos.y > maxY) maxY = pos.y;
@@ -299,9 +302,9 @@ function renderStickersCanvas(isTriggerDrop = false) {
             }
           </div>
 
-          <!-- 便签小标签：胶带质感附着于贴纸 -->
+          <!-- 便签小标签：纯白极简胶带质感附着于贴纸 -->
           <div class="mt-1 text-center pointer-events-none select-none">
-            <div class="inline-flex items-center gap-1 bg-[#FAF7EE] text-stone-900 px-2.5 py-0.5 rounded-full border border-stone-300/80 shadow-2xs backdrop-blur-xs">
+            <div class="inline-flex items-center gap-1 bg-white text-stone-900 px-2.5 py-0.5 rounded-full border border-stone-200/90 shadow-2xs backdrop-blur-xs">
               <span class="text-[10px] font-bold truncate max-w-[85px]">${g.name}</span>
               <span class="text-[9px] text-pine-800 font-black">${weightStr}</span>
             </div>
@@ -310,7 +313,9 @@ function renderStickersCanvas(isTriggerDrop = false) {
       `;
     }).join('');
 
-    container.style.height = `${Math.max(560, maxY + 180)}px`;
+    // 装备收纳垫高度严密自适应：贴纸高度约 120px，计算出紧凑高度，保证完全停留在底部快门按钮上方！
+    const dynamicMatHeight = Math.max(200, maxY + 135);
+    container.style.height = `${dynamicMatHeight}px`;
     container.innerHTML = htmlCards;
 
     // 绑定自由拖拽与点击事件
@@ -385,7 +390,7 @@ function attachStickerDragEvents(container) {
           const container = document.getElementById('stickers-container');
           const maxDragX = Math.max(160, (container?.clientWidth || 340) - 146);
           // 拖动时的下边界：严格停在收纳垫安全区内，绝不允许贴纸拖入底部按钮遮挡区
-          const maxDragY = Math.max(220, (container?.clientHeight || 440) - 130);
+          const maxDragY = Math.max(150, (container?.clientHeight || 260) - 125);
 
           // 严格将贴纸限制在垫子框安全范围内
           pos.x = Math.max(6, Math.min(maxDragX, Math.round(initialPosX + dx)));
