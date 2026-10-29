@@ -1,4 +1,4 @@
-// Trail Gear Web 移动端原型交互引擎
+// Trail Gear — 现代高级黑金设计交互引擎
 const API_BASE = 'https://trail-gear-api.liuziting.workers.dev/api/v1';
 
 let state = {
@@ -56,14 +56,12 @@ async function initAuth() {
     state.token = savedToken;
     try {
       state.user = await apiRequest('/auth/me');
-      document.getElementById('user-name').textContent = state.user.nickname;
       return;
     } catch {
       state.token = null;
     }
   }
 
-  // 尝试默认测试用户登录
   try {
     const res = await apiRequest('/auth/login', {
       method: 'POST',
@@ -72,9 +70,7 @@ async function initAuth() {
     state.token = res.token;
     state.user = res.user;
     localStorage.setItem('trailgear_token', res.token);
-    document.getElementById('user-name').textContent = state.user.nickname;
   } catch {
-    // 若不存在则注册
     const regRes = await apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
@@ -86,15 +82,14 @@ async function initAuth() {
     state.token = regRes.token;
     state.user = regRes.user;
     localStorage.setItem('trailgear_token', regRes.token);
-    document.getElementById('user-name').textContent = state.user.nickname;
   }
 }
 
-// ======================== 数据加载 ========================
+// ======================== 数据加载与指标计算 ========================
 
 async function loadCategories() {
   state.categories = await apiRequest('/categories');
-  renderCategoryPills();
+  renderCategorySegmented();
   renderCategorySelect();
 }
 
@@ -108,10 +103,37 @@ async function loadGears() {
   const data = await apiRequest(url);
   state.gears = data.gears || [];
 
-  document.getElementById('gear-count-text').textContent = `共 ${data.total_count} 件装备`;
-  const kg = (data.total_weight_grams / 1000).toFixed(2);
-  document.getElementById('gear-weight-badge').textContent = `总重 ${kg} kg`;
+  // 计算关键指标
+  const totalCount = data.total_count || 0;
+  const totalKg = ((data.total_weight_grams || 0) / 1000).toFixed(1);
 
+  // 基础重量 (排除消耗品)
+  let baseWeightGrams = 0;
+  state.gears.forEach(g => {
+    if (g.category_id !== 'cat_consumable') {
+      baseWeightGrams += g.weight_grams;
+    }
+  });
+  const baseKg = (baseWeightGrams / 1000).toFixed(1);
+
+  // 更新指标卡片
+  document.getElementById('stat-total-count').textContent = totalCount;
+  document.getElementById('stat-total-weight').textContent = totalKg;
+  document.getElementById('stat-base-weight').textContent = baseKg;
+
+  // 背负级别评估
+  const ulLevelEl = document.getElementById('stat-ul-level');
+  if (baseWeightGrams < 4500) {
+    ulLevelEl.textContent = 'UL';
+  } else if (baseWeightGrams < 9000) {
+    ulLevelEl.textContent = '轻量';
+  } else {
+    ulLevelEl.textContent = '重装';
+  }
+
+  document.getElementById('sticker-stage-count').textContent = `${totalCount} 件装备`;
+
+  renderStickerStage();
   renderGearsGrid();
 }
 
@@ -127,23 +149,25 @@ async function loadTripDetail(tripId) {
   switchTab('trip-detail');
 }
 
-// ======================== 界面渲染 ========================
+// ======================== 界面渲染 (黑金高级质感) ========================
 
-function renderCategoryPills() {
-  const container = document.getElementById('category-pills');
+// 顶部 Segmented Control
+function renderCategorySegmented() {
+  const container = document.getElementById('category-segmented');
   let html = `
     <button onclick="selectCategory('')" 
-      class="cat-pill px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${state.selectedCategoryId === '' ? 'bg-forest-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200'}">
+      class="seg-btn px-3.5 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedCategoryId === '' ? 'bg-champagne-200 text-obsidian-950 shadow-sm' : 'bg-obsidian-800 text-sand-500 hover:text-champagne-200'}">
       全部
     </button>
   `;
 
   state.categories.forEach(c => {
     const isAct = state.selectedCategoryId === c.id;
+    const shortName = c.name.split(' ')[0];
     html += `
       <button onclick="selectCategory('${c.id}')" 
-        class="cat-pill px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${isAct ? 'bg-forest-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200'}">
-        ${c.name.split(' ')[0]}
+        class="seg-btn px-3.5 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${isAct ? 'bg-champagne-200 text-obsidian-950 shadow-sm' : 'bg-obsidian-800 text-sand-500 hover:text-champagne-200'}">
+        ${shortName}
       </button>
     `;
   });
@@ -153,57 +177,106 @@ function renderCategoryPills() {
 
 function selectCategory(id) {
   state.selectedCategoryId = id;
-  renderCategoryPills();
+  renderCategorySegmented();
   loadGears();
 }
 
 function renderCategorySelect() {
   const select = document.getElementById('maker-category');
-  select.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  if (select) {
+    select.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
 }
 
+// 核心高光：贴纸展台聚落 (Sticker Stage，复刻参考图)
+function renderStickerStage() {
+  const stage = document.getElementById('sticker-stage');
+  if (state.gears.length === 0) {
+    stage.innerHTML = `
+      <div class="text-center text-sand-500">
+        <i class="fa-solid fa-layer-group text-3xl mb-1 opacity-40"></i>
+        <p class="text-[11px]">暂无贴纸，点击下方制作您的第一件贴纸装备</p>
+      </div>
+    `;
+    return;
+  }
+
+  // 计算有机贴纸集群
+  const stickersWithImg = state.gears.filter(g => g.sticker_image_url);
+  const displayItems = stickersWithImg.length > 0 ? stickersWithImg : state.gears;
+
+  stage.innerHTML = `
+    <div class="relative w-full h-full flex items-center justify-center">
+      ${displayItems.slice(0, 10).map((g, idx) => {
+        // 伪随机散落在聚落舞台
+        const count = Math.min(displayItems.length, 10);
+        const step = (idx / count) * Math.PI * 2;
+        const radiusX = 90 + ((idx * 17) % 35);
+        const radiusY = 30 + ((idx * 13) % 25);
+        const posX = Math.cos(step) * radiusX;
+        const posY = Math.sin(step) * radiusY;
+        const angle = ((idx * 29) % 26) - 13;
+        const zIndex = 10 + idx;
+
+        return `
+          <div class="absolute sticker-floating cursor-pointer group"
+            style="transform: translate(${posX}px, ${posY}px) rotate(${angle}deg); z-index: ${zIndex};"
+            onclick="confirmDeleteGear('${g.id}', '${g.name.replace(/'/g, "\\'")}')"
+            title="${g.name} (${g.weight_grams}g)">
+            
+            ${g.sticker_image_url 
+              ? `<img src="${g.sticker_image_url}" class="w-16 h-16 object-contain filter drop-shadow-md" alt="${g.name}">`
+              : `<div class="w-14 h-14 bg-obsidian-800 border-2 border-white rounded-2xl flex items-center justify-center text-champagne-300 shadow-lg font-bold text-xs">
+                  ${g.name.slice(0, 2)}
+                 </div>`
+            }
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// 装备卡片网格
 function renderGearsGrid() {
   const container = document.getElementById('gears-grid');
   if (state.gears.length === 0) {
     container.innerHTML = `
-      <div class="col-span-2 py-12 text-center text-gray-400">
-        <i class="fa-solid fa-box-open text-4xl mb-2 text-gray-300"></i>
-        <p class="text-xs">暂无装备，点击右下角添加第一张装备贴纸！</p>
+      <div class="col-span-2 py-10 text-center text-sand-500">
+        <i class="fa-solid fa-box-open text-3xl mb-1.5 opacity-40"></i>
+        <p class="text-xs">暂无装备</p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = state.gears.map((g, index) => {
-    // 产生稳定的轻微随机倾斜 (-2.5° ~ +2.5°)
-    const angle = ((index * 37) % 50 - 25) / 10;
+    const angle = ((index * 37) % 30 - 15) / 10;
     const weightStr = g.weight_grams >= 1000 
       ? `${(g.weight_grams / 1000).toFixed(2)} kg` 
       : `${g.weight_grams} g`;
 
     return `
-      <div class="sticker-card bg-white rounded-2xl p-3 border border-gray-100 flex flex-col justify-between cursor-pointer"
-        style="transform: rotate(${angle}deg);"
+      <div class="card-dark p-3.5 flex flex-col justify-between cursor-pointer hover:border-white/10 transition group"
         onclick="confirmDeleteGear('${g.id}', '${g.name.replace(/'/g, "\\'")}')">
         
-        <!-- 贴纸图案区 -->
-        <div class="h-28 bg-[#f8fafc] rounded-xl flex items-center justify-center p-2 overflow-hidden relative">
+        <!-- 贴纸居中暗调展示 -->
+        <div class="h-28 bg-obsidian-900/80 rounded-2xl flex items-center justify-center p-2 overflow-hidden relative border border-white/5">
           ${g.sticker_image_url 
-            ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow-sm" alt="${g.name}">`
-            : `<i class="fa-solid fa-tent text-3xl text-emerald-600"></i>`
+            ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow-lg transition transform group-hover:scale-105" style="transform: rotate(${angle}deg);" alt="${g.name}">`
+            : `<i class="fa-solid fa-tent text-3xl text-champagne-400"></i>`
           }
         </div>
 
-        <!-- 装备信息 -->
         <div class="mt-2.5">
-          ${g.brand ? `<p class="text-[10px] font-bold text-gray-400 truncate">${g.brand}</p>` : ''}
-          <h4 class="text-xs font-bold text-gray-800 truncate">${g.name}</h4>
+          ${g.brand ? `<p class="text-[10px] font-bold text-sand-500 tracking-wider truncate uppercase">${g.brand}</p>` : ''}
+          <h4 class="text-xs font-bold text-champagne-200 truncate mt-0.5">${g.name}</h4>
           
-          <div class="flex justify-between items-center mt-2">
-            <span class="text-[10px] font-bold bg-forest-50 text-forest-700 px-1.5 py-0.5 rounded">
+          <div class="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+            <span class="text-[11px] font-bold text-champagne-300 num-display">
               ${weightStr}
             </span>
-            <span class="text-[9px] text-gray-400 truncate max-w-[60px]">
+            <span class="text-[9px] text-sand-600 truncate max-w-[65px]">
               ${g.category_name ? g.category_name.split(' ')[0] : ''}
             </span>
           </div>
@@ -213,13 +286,14 @@ function renderGearsGrid() {
   }).join('');
 }
 
+// 行程列表
 function renderTripsList() {
   const container = document.getElementById('trips-list');
   if (state.trips.length === 0) {
     container.innerHTML = `
-      <div class="py-12 text-center text-gray-400">
-        <i class="fa-solid fa-mountain text-4xl mb-2 text-gray-300"></i>
-        <p class="text-xs">暂无行程，点击右上角新建行程</p>
+      <div class="py-12 text-center text-sand-500">
+        <i class="fa-solid fa-mountain text-4xl mb-2 opacity-30"></i>
+        <p class="text-xs">暂无行程安排，点击右上角新建</p>
       </div>
     `;
     return;
@@ -228,27 +302,27 @@ function renderTripsList() {
   container.innerHTML = state.trips.map(t => {
     const s = t.stats || { total_items: 0, packed_items: 0, total_weight_grams: 0, base_weight_grams: 0 };
     const progress = s.total_items === 0 ? 0 : Math.round((s.packed_items / s.total_items) * 100);
-    const baseKg = (s.base_weight_grams / 1000).toFixed(2);
+    const baseKg = (s.base_weight_grams / 1000).toFixed(1);
 
     return `
-      <div onclick="loadTripDetail('${t.id}')" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm cursor-pointer hover:border-forest-600 transition">
+      <div onclick="loadTripDetail('${t.id}')" class="card-dark p-5 cursor-pointer hover:border-white/10 transition space-y-3">
         <div class="flex justify-between items-start">
           <div>
-            <h4 class="text-sm font-bold text-gray-800">${t.title}</h4>
-            ${t.description ? `<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">${t.description}</p>` : ''}
+            <h4 class="text-base font-bold text-champagne-200">${t.title}</h4>
+            ${t.description ? `<p class="text-xs text-sand-500 mt-1 line-clamp-1">${t.description}</p>` : ''}
           </div>
-          <span class="text-[10px] bg-forest-50 text-forest-700 font-bold px-2 py-0.5 rounded-full">
+          <span class="text-[10px] bg-champagne-200/10 text-champagne-200 font-bold px-2.5 py-1 rounded-full border border-champagne-200/20">
             ${progress === 100 && s.total_items > 0 ? '已就绪 ✅' : '筹备中'}
           </span>
         </div>
 
-        <div class="mt-3">
-          <div class="flex justify-between text-[11px] text-gray-500 font-medium mb-1">
+        <div>
+          <div class="flex justify-between text-xs text-sand-500 font-medium mb-1.5">
             <span>打包进度: ${s.packed_items}/${s.total_items} 件</span>
-            <span class="text-forest-700 font-bold">基础重量: ${baseKg} kg</span>
+            <span class="text-champagne-300 font-bold">基础重量: ${baseKg} kg</span>
           </div>
-          <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div class="bg-forest-600 h-full rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+          <div class="w-full bg-obsidian-900 h-2 rounded-full overflow-hidden border border-white/5">
+            <div class="bg-champagne-200 h-full rounded-full transition-all duration-300" style="width: ${progress}%"></div>
           </div>
         </div>
       </div>
@@ -256,6 +330,7 @@ function renderTripsList() {
   }).join('');
 }
 
+// 行程详情
 function renderTripDetail() {
   const t = state.currentTripDetail;
   if (!t) return;
@@ -264,36 +339,36 @@ function renderTripDetail() {
   document.getElementById('detail-trip-desc').textContent = t.description || '无附加路线说明';
 
   const s = t.stats || { total_items: 0, packed_items: 0, total_weight_grams: 0, base_weight_grams: 0 };
-  document.getElementById('detail-packed-count').textContent = `${s.packed_items}/${s.total_items} 件`;
-  document.getElementById('detail-base-weight').textContent = `${(s.base_weight_grams / 1000).toFixed(2)} kg`;
-  document.getElementById('detail-total-weight').textContent = `${(s.total_weight_grams / 1000).toFixed(2)} kg`;
+  document.getElementById('detail-packed-count').textContent = `${s.packed_items}/${s.total_items}`;
+  document.getElementById('detail-base-weight').textContent = `${(s.base_weight_grams / 1000).toFixed(1)} kg`;
+  document.getElementById('detail-total-weight').textContent = `${(s.total_weight_grams / 1000).toFixed(1)} kg`;
 
   const container = document.getElementById('detail-items-list');
   const items = t.items || [];
 
   if (items.length === 0) {
     container.innerHTML = `
-      <div class="py-10 text-center text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
-        <i class="fa-solid fa-list-check text-3xl mb-2 text-gray-300"></i>
-        <p class="text-xs">清单还是空的，点击上方“从装备柜添加”</p>
+      <div class="card-dark py-12 text-center text-sand-500 border-dashed">
+        <i class="fa-solid fa-list-check text-3xl mb-2 opacity-30"></i>
+        <p class="text-xs">清单空空如也，点击右上角挑选装备</p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = items.map(item => `
-    <div class="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between shadow-sm">
+    <div class="card-dark p-3.5 flex items-center justify-between shadow-sm">
       <div class="flex items-center space-x-3">
         <input type="checkbox" ${item.is_packed ? 'checked' : ''} 
           onchange="toggleItemPacked('${item.trip_item_id}', this.checked)"
-          class="w-4 h-4 text-forest-600 rounded border-gray-300 focus:ring-forest-600 cursor-pointer">
+          class="w-4 h-4 text-champagne-400 bg-obsidian-900 border-white/20 rounded focus:ring-0 cursor-pointer">
         <div>
-          <p class="text-xs font-bold text-gray-800 ${item.is_packed ? 'line-through text-gray-400' : ''}">${item.gear_name}</p>
-          <p class="text-[10px] text-gray-400">${item.gear_brand || ''} · ${item.weight_grams}g</p>
+          <p class="text-xs font-bold ${item.is_packed ? 'line-through text-sand-600' : 'text-champagne-200'}">${item.gear_name}</p>
+          <p class="text-[10px] text-sand-500">${item.gear_brand || ''} · ${item.weight_grams}g</p>
         </div>
       </div>
-      <span class="text-[10px] font-bold ${item.is_packed ? 'text-forest-600 bg-forest-50' : 'text-orange-500 bg-orange-50'} px-2 py-0.5 rounded">
-        ${item.is_packed ? '已打包 ✅' : '待收拾 ⏳'}
+      <span class="text-[10px] font-bold ${item.is_packed ? 'text-champagne-300 bg-champagne-300/10' : 'text-amber-500/80 bg-amber-500/10'} px-2.5 py-1 rounded-full">
+        ${item.is_packed ? '已打包 ✅' : '待整理 ⏳'}
       </span>
     </div>
   `).join('');
@@ -341,7 +416,6 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
     const img = new Image();
     img.onload = () => {
       state.currentImageSource = img;
-      // 自动设置文件名作为默认名称
       const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       const nameInput = document.getElementById('maker-name');
       if (!nameInput.value || nameInput.value.includes('帐篷')) {
@@ -367,17 +441,15 @@ function smartRemoveBackground(img) {
   const w = offscreen.width;
   const h = offscreen.height;
 
-  // 检查是否本身已经带透明通道（若大部分边缘已透明，则直接返回）
   let transparentBorderCount = 0;
   for (let x = 0; x < w; x++) {
     if (data[x * 4 + 3] < 50) transparentBorderCount++;
     if (data[((h - 1) * w + x) * 4 + 3] < 50) transparentBorderCount++;
   }
   if (transparentBorderCount > w * 0.4) {
-    return offscreen; // 已经是透明 PNG，直接使用
+    return offscreen;
   }
 
-  // 取 4 个顶角的采样背景色
   const corners = [
     [0, 0],
     [w - 1, 0],
@@ -395,12 +467,9 @@ function smartRemoveBackground(img) {
   bgG = Math.round(bgG / 4);
   bgB = Math.round(bgB / 4);
 
-  // 泛洪/边缘扩散抠出背景
   const visited = new Uint8Array(w * h);
   const queue = [];
-
-  // 将四边像素中与背景相近的点作为种子注入队列
-  const colorTolerance = 45; // 色差容限
+  const colorTolerance = 45;
 
   function isBgColor(idx) {
     const r = data[idx], g = data[idx + 1], b = data[idx + 2];
@@ -430,7 +499,6 @@ function smartRemoveBackground(img) {
     const qy = queue[head++];
     const pixIdx = (qy * w + qx) * 4;
 
-    // 清除为透明
     data[pixIdx + 3] = 0;
 
     for (let i = 0; i < 4; i++) {
@@ -453,7 +521,7 @@ function smartRemoveBackground(img) {
   return offscreen;
 }
 
-// 预设装备图形库
+// 预设装备矢量渲染
 function loadGearPreset(type) {
   const sampleCanvas = document.createElement('canvas');
   sampleCanvas.width = 300;
@@ -461,8 +529,7 @@ function loadGearPreset(type) {
   const sCtx = sampleCanvas.getContext('2d');
 
   if (type === 'tent') {
-    // 帐篷
-    sCtx.fillStyle = '#10b981';
+    sCtx.fillStyle = '#22c55e';
     sCtx.beginPath();
     sCtx.moveTo(150, 40);
     sCtx.lineTo(260, 240);
@@ -470,7 +537,7 @@ function loadGearPreset(type) {
     sCtx.closePath();
     sCtx.fill();
 
-    sCtx.fillStyle = '#047857';
+    sCtx.fillStyle = '#15803d';
     sCtx.beginPath();
     sCtx.moveTo(150, 80);
     sCtx.lineTo(210, 240);
@@ -478,7 +545,7 @@ function loadGearPreset(type) {
     sCtx.closePath();
     sCtx.fill();
 
-    sCtx.fillStyle = '#fbbf24';
+    sCtx.fillStyle = '#fde047';
     sCtx.beginPath();
     sCtx.moveTo(150, 110);
     sCtx.lineTo(180, 240);
@@ -493,12 +560,11 @@ function loadGearPreset(type) {
     document.getElementById('maker-desc').value = '双人自立式帐篷，抗风防雨';
     document.getElementById('maker-category').value = 'cat_shelter';
   } else if (type === 'pack') {
-    // 背包
-    sCtx.fillStyle = '#3b82f6';
+    sCtx.fillStyle = '#38bdf8';
     sCtx.roundRect(80, 70, 140, 180, 24);
     sCtx.fill();
 
-    sCtx.fillStyle = '#1d4ed8';
+    sCtx.fillStyle = '#0284c7';
     sCtx.roundRect(95, 40, 110, 45, 12);
     sCtx.fill();
 
@@ -513,15 +579,14 @@ function loadGearPreset(type) {
     document.getElementById('maker-desc').value = '背负支撑极佳，适合多日长线穿越';
     document.getElementById('maker-category').value = 'cat_pack';
   } else if (type === 'stove') {
-    // 气炉
-    sCtx.fillStyle = '#ef4444';
+    sCtx.fillStyle = '#f87171';
     sCtx.roundRect(100, 160, 100, 70, 16);
     sCtx.fill();
 
-    sCtx.fillStyle = '#9ca3af';
+    sCtx.fillStyle = '#cbd5e1';
     sCtx.fillRect(135, 110, 30, 50);
 
-    sCtx.fillStyle = '#f97316';
+    sCtx.fillStyle = '#fb923c';
     sCtx.beginPath();
     sCtx.arc(150, 95, 20, 0, Math.PI * 2);
     sCtx.fill();
@@ -533,7 +598,6 @@ function loadGearPreset(type) {
     document.getElementById('maker-desc').value = '强抗风稳压微型气炉';
     document.getElementById('maker-category').value = 'cat_cook';
   } else if (type === 'cup') {
-    // 钛杯
     sCtx.fillStyle = '#94a3b8';
     sCtx.roundRect(90, 80, 120, 130, 14);
     sCtx.fill();
@@ -560,20 +624,18 @@ function loadGearPreset(type) {
   img.src = sampleCanvas.toDataURL();
 }
 
-// 打开贴纸制作器
 function openMakerWithPreset() {
   switchTab('maker');
   loadGearPreset('tent');
 }
 
-// 核心贴纸描边算法：智能抠图 + 多向形态学膨胀 + 白色圆角描边 + 柔和阴影
+// 核心贴纸描边算法
 function processSticker(imgSource, strokeWidth) {
   document.getElementById('upload-placeholder').classList.add('hidden');
   canvas.classList.remove('hidden');
   const badge = document.getElementById('change-photo-badge');
   if (badge) badge.classList.remove('hidden');
 
-  // 若开启自动抠图，先进行端侧背景消除
   let renderSource = imgSource;
   if (autoCutoutToggle && autoCutoutToggle.checked) {
     renderSource = smartRemoveBackground(imgSource);
@@ -584,7 +646,7 @@ function processSticker(imgSource, strokeWidth) {
   canvas.height = renderSource.height + padding * 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. 绘制多层白色偏移生成膨胀描边 (Sticker Stroke)
+  // 1. 绘制饱满白色描边 (Sticker Pure White Outline)
   const steps = 36;
   ctx.save();
   for (let r = strokeWidth; r >= 1; r -= 2) {
@@ -594,15 +656,15 @@ function processSticker(imgSource, strokeWidth) {
       const oy = padding + Math.sin(angle) * r;
 
       ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
-      ctx.shadowBlur = 3;
+      ctx.shadowBlur = 4;
       ctx.drawImage(renderSource, ox, oy);
     }
   }
 
-  // 2. 覆盖柔和环境投影 (Drop Shadow)
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.14)';
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 4;
+  // 2. 覆盖立体环境阴影 (Drop Shadow)
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 6;
 
   // 3. 覆盖原始主体在正中央
   ctx.drawImage(renderSource, padding, padding);
@@ -624,22 +686,19 @@ async function saveGearFromMaker() {
 
   const btn = document.getElementById('save-gear-btn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在上传到 Cloudflare...`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 上传 Cloudflare R2...`;
 
   try {
-    // 导出 Canvas 为透明 PNG
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     const formData = new FormData();
     formData.append('file', blob, 'sticker.png');
     formData.append('type', 'gear_sticker');
 
-    // 上传到 Cloudflare R2
     const uploadRes = await apiRequest('/storage/upload', {
       method: 'POST',
       body: formData,
     });
 
-    // 保存到 Cloudflare D1
     await apiRequest('/gears', {
       method: 'POST',
       body: JSON.stringify({
@@ -655,12 +714,11 @@ async function saveGearFromMaker() {
 
     await loadGears();
     switchTab('closet');
-    alert('🎉 贴纸装备已成功上传至 Cloudflare R2 与 D1！');
   } catch (e) {
     alert(`保存失败: ${e.message}`);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> 保存贴纸到装备柜`;
+    btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 保存并上传到 Cloudflare`;
   }
 }
 
@@ -671,8 +729,7 @@ async function confirmDeleteGear(gearId, name) {
   }
 }
 
-// ======================== 行程创建与添加装备 ========================
-
+// 行程弹窗与添加
 function openCreateTripModal() {
   document.getElementById('modal-create-trip').classList.remove('hidden');
 }
@@ -703,14 +760,14 @@ function openAddGearToTripModal() {
 
   const listEl = document.getElementById('available-gears-list');
   if (available.length === 0) {
-    listEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-6">装备柜中暂无新装备可添加</p>`;
+    listEl.innerHTML = `<p class="text-xs text-sand-500 text-center py-6">装备柜中暂无新装备可添加</p>`;
   } else {
     listEl.innerHTML = available.map(g => `
-      <label class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 border border-gray-100 cursor-pointer">
-        <input type="checkbox" value="${g.id}" class="gear-add-checkbox w-4 h-4 text-forest-600 rounded">
+      <label class="flex items-center space-x-3 p-3 rounded-xl hover:bg-obsidian-800 border border-white/5 cursor-pointer">
+        <input type="checkbox" value="${g.id}" class="gear-add-checkbox w-4 h-4 text-champagne-400 bg-obsidian-900 border-white/20 rounded">
         <div>
-          <p class="text-xs font-bold text-gray-800">${g.name}</p>
-          <p class="text-[10px] text-gray-400">${g.brand || ''} · ${g.weight_grams}g</p>
+          <p class="text-xs font-bold text-champagne-200">${g.name}</p>
+          <p class="text-[10px] text-sand-500">${g.brand || ''} · ${g.weight_grams}g</p>
         </div>
       </label>
     `).join('');
@@ -738,7 +795,7 @@ function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 
-// ======================== Tab 切换 ========================
+// ======================== Tab 切换与底栏 Dock ========================
 
 function switchTab(tab) {
   state.activeTab = tab;
@@ -748,22 +805,27 @@ function switchTab(tab) {
     if (el) el.classList.toggle('hidden', v !== tab);
   });
 
-  // FAB 悬浮按钮仅在装备柜显示
-  document.getElementById('fab-maker').classList.toggle('hidden', tab !== 'closet');
+  // Dock 按钮高亮
+  const dockCloset = document.getElementById('dock-closet');
+  const dockTrips = document.getElementById('dock-trips');
+  const dockMaker = document.getElementById('dock-maker');
 
-  // Tab 按钮高亮
-  const tabCloset = document.getElementById('tab-closet');
-  const tabTrips = document.getElementById('tab-trips');
+  [dockCloset, dockTrips, dockMaker].forEach(b => {
+    b.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-sand-500 hover:text-champagne-200 transition';
+  });
+
   if (tab === 'closet') {
-    tabCloset.className = 'flex flex-col items-center text-forest-600 font-bold space-y-1';
-    tabTrips.className = 'flex flex-col items-center text-gray-400 hover:text-gray-600 font-medium space-y-1';
-    document.getElementById('header-title').textContent = '装备柜 Gear Closet';
+    dockCloset.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
+    document.getElementById('header-title').textContent = '装备';
+    document.getElementById('header-subtitle').textContent = 'Trail Gear · 贴纸化装备库';
   } else if (tab === 'trips' || tab === 'trip-detail') {
-    tabTrips.className = 'flex flex-col items-center text-forest-600 font-bold space-y-1';
-    tabCloset.className = 'flex flex-col items-center text-gray-400 hover:text-gray-600 font-medium space-y-1';
-    document.getElementById('header-title').textContent = '行程清单 Trips';
+    dockTrips.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
+    document.getElementById('header-title').textContent = '行程';
+    document.getElementById('header-subtitle').textContent = '打包进度与负重规划';
   } else if (tab === 'maker') {
-    document.getElementById('header-title').textContent = '贴纸工坊 Sticker Studio';
+    dockMaker.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
+    document.getElementById('header-title').textContent = '贴纸工坊';
+    document.getElementById('header-subtitle').textContent = '暗调舞台 · 智能边缘生成';
   }
 }
 
