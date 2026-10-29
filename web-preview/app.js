@@ -12,6 +12,7 @@ let state = {
   rawFileSize: 0,
   positions: {},           // gearId -> { x, y, rot, rotStart, zIndex }
   maxZIndex: 20,
+  newlyCreatedGearId: null, // 标记刚创建的新贴纸，用于触发独立下落动效
 };
 
 // 预设丰富、非单一的角度池 (从 -34° 到 +34°，让每个装备落下时角度各异)
@@ -266,7 +267,12 @@ function renderStickersCanvas(isTriggerDrop = false) {
         ? `${(g.weight_grams / 1000).toFixed(1)} kg` 
         : `${g.weight_grams} g`;
 
-      const dropClass = isTriggerDrop ? 'dropping' : '';
+      let dropClass = '';
+      if (state.newlyCreatedGearId && g.id === state.newlyCreatedGearId) {
+        dropClass = 'new-arrival';
+      } else if (isTriggerDrop) {
+        dropClass = 'dropping';
+      }
 
       return `
         <div class="sticker-entity ${dropClass}"
@@ -299,6 +305,16 @@ function renderStickersCanvas(isTriggerDrop = false) {
     // 绑定自由拖拽与点击事件
     attachStickerDragEvents(container);
     saveStickerPositions();
+
+    // 新增贴纸动效完成后清理 class，保证后续拖拽绝对平滑
+    if (state.newlyCreatedGearId) {
+      const createdId = state.newlyCreatedGearId;
+      setTimeout(() => {
+        const el = document.getElementById(`sticker-${createdId}`);
+        if (el) el.classList.remove('new-arrival');
+      }, 900);
+      state.newlyCreatedGearId = null;
+    }
 
     // 掉落动画完成后清理 dropping class，保证后续拖拽绝对跟手
     if (isTriggerDrop) {
@@ -787,17 +803,30 @@ async function saveGearFromMaker() {
       }),
     });
 
-    // 为新生成的贴纸设置在装备收纳垫最正中上方的着陆点，准备触发大反弹掉落
+    // 为新生成的贴纸设置在装备收纳垫上的着陆点，准备触发大反弹掉落
     if (createdGear && createdGear.id) {
+      state.newlyCreatedGearId = createdGear.id;
+
       const container = document.getElementById('stickers-container');
       const trayWidth = container?.clientWidth || 340;
-      const targetX = Math.max(16, Math.round((trayWidth - 146) / 2));
+      
+      const count = state.gears.length;
+      const col = count % 2;
+      const row = Math.floor(count / 2);
+      const targetX = col === 0 
+        ? Math.round(14 + Math.random() * 18) 
+        : Math.min(trayWidth - 148, Math.round(168 + Math.random() * 18));
+      const targetY = Math.min(row * 155 + 16, 420);
+
+      const rot = ORGANIC_ANGLES[(count * 3 + (createdGear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length];
+      const rotStart = rot + (Math.random() > 0.5 ? 32 : -32);
+
       state.positions[createdGear.id] = {
         x: targetX,
-        y: 18,
-        rot: ORGANIC_ANGLES[Math.floor(Math.random() * ORGANIC_ANGLES.length)],
-        rotStart: -35,
-        zIndex: (state.maxZIndex || 20) + 5,
+        y: targetY,
+        rot,
+        rotStart,
+        zIndex: (state.maxZIndex || 20) + 10,
       };
       saveStickerPositions();
     }
@@ -809,9 +838,18 @@ async function saveGearFromMaker() {
     const descInput = document.getElementById('maker-desc');
     if (descInput) descInput.value = '';
 
-    // 立刻切换回首页，并触发物理重力掉落特效！
+    // 确保回到随性散落手账桌面
+    state.layoutMode = 'scattered';
+    const btnText = document.getElementById('layout-btn-text');
+    if (btnText) btnText.textContent = '一键整理';
+    const icon = document.getElementById('layout-icon');
+    if (icon) icon.className = 'fa-solid fa-grip text-pine-800';
+    document.getElementById('reshuffle-btn')?.classList.remove('hidden');
+
+    // 立刻切换回首页，平滑滚动至顶端，让新贴纸自然自天而降进入垫子！
     switchView('closet');
-    await loadGears(true);
+    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    await loadGears(false);
   } catch (e) {
     alert(`保存失败: ${e.message}`);
   } finally {

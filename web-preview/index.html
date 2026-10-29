@@ -122,6 +122,42 @@
       animation-delay: calc(var(--delay, 0) * 80ms);
     }
 
+    /* 新增贴纸回到首页时的自然重力掉落与弹性碰撞 */
+    @keyframes newArrivalDrop {
+      0% {
+        opacity: 0;
+        transform: translate3d(var(--pos-x, 0px), -240px, 0) scale(0.6) rotate(var(--rot-start, -35deg));
+        filter: drop-shadow(0 45px 35px rgba(25, 20, 15, 0.1));
+      }
+      30% {
+        opacity: 1;
+      }
+      62% {
+        /* 触碰装备垫瞬间：物理微压扁 (Squash) */
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) + 16px), 0) scale(1.12, 0.92) rotate(calc(var(--rot, 0deg) + 3deg));
+        filter: drop-shadow(0 6px 10px rgba(25, 20, 15, 0.32));
+      }
+      80% {
+        /* 弹性回弹跳起：轻微拉伸 (Stretch) */
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) - 8px), 0) scale(0.96, 1.04) rotate(calc(var(--rot, 0deg) - 2deg));
+        filter: drop-shadow(0 18px 22px rgba(25, 20, 15, 0.20));
+      }
+      92% {
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) + 2px), 0) scale(1.02, 0.98) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 8px 12px rgba(25, 20, 15, 0.22));
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) scale(1, 1) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 8px 16px rgba(25, 20, 15, 0.16));
+      }
+    }
+
+    .sticker-entity.new-arrival {
+      animation: newArrivalDrop 0.82s cubic-bezier(0.18, 0.9, 0.32, 1.2) forwards !important;
+      z-index: 9999 !important;
+    }
+
     .sticker-entity.settling {
       animation: stickerSettle 0.26s cubic-bezier(0.2, 1.3, 0.4, 1) forwards;
     }
@@ -218,7 +254,7 @@
         </div>
 
         <!-- 营地装备收纳垫框 (Bounded Camp Mat Frame) -->
-        <div id="camp-mat-frame" class="relative rounded-[30px] bg-[#F6F2EA] border-2 border-dashed border-stone-300/80 p-3 shadow-inner min-h-[550px] overflow-hidden transition-all">
+        <div id="camp-mat-frame" class="relative rounded-[30px] bg-[#F6F2EA] border-2 border-dashed border-stone-300/80 p-3 shadow-inner min-h-[550px] overflow-visible transition-all">
           <!-- 垫子顶部状态线 -->
           <div class="flex justify-between items-center text-[10px] font-mono text-stone-400 select-none pb-2 border-b border-stone-200/60 mb-2">
             <span class="flex items-center gap-1.5 font-bold tracking-wider text-stone-600">
