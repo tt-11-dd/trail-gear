@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch: # 支持在 GitHub 网页上手动一键点击触发打包
+
+jobs:
+  build-apk:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Generate Android Native Template & Install Dependencies
+        working-directory: ./app
+        run: |
+          # 自动补全 Android 原生项目脚手架（包名 com.trailgear.app）
+          flutter create . --org com.trailgear --platforms=android
+          
+          # 获取依赖包
+          flutter pub get
+
+      - name: Configure Android Permissions for Camera & Storage
+        run: |
+          # 确保 AndroidManifest 具备拍照与存储权限
+          MANIFEST_PATH="app/android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_PATH" ]; then
+            sed -i '/<manifest/a \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.INTERNET" />' "$MANIFEST_PATH"
+          fi
+
+      - name: Build Android Release APK
+        working-directory: ./app
+        run: |
+          # 打包未签名的 Release APK（开箱即装）
+          flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrailGear-Android-Release-APK
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
