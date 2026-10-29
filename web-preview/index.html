@@ -163,6 +163,39 @@
       animation: stickerSettle 0.26s cubic-bezier(0.2, 1.3, 0.4, 1) forwards;
     }
 
+    /* 撕下贴纸物理拟真动效 (Peel & Tear Off Mat) */
+    @keyframes stickerPeelOff {
+      0% {
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) rotate(var(--rot, 0deg)) scale(1);
+        filter: drop-shadow(0 6px 12px rgba(20, 15, 10, 0.16));
+        opacity: 1;
+      }
+      22% {
+        /* 第一阶段：单侧角质感卷曲掀起 */
+        transform: translate3d(calc(var(--pos-x, 0px) + 8px), calc(var(--pos-y, 0px) - 14px), 0) rotate(calc(var(--rot, 0deg) - 10deg)) skewY(8deg) scale(1.08);
+        filter: drop-shadow(0 20px 24px rgba(20, 15, 10, 0.28));
+        opacity: 1;
+      }
+      55% {
+        /* 第二阶段：发力撕扯剥离桌面，纸张剧烈腾空倾斜 */
+        transform: translate3d(calc(var(--pos-x, 0px) - 22px), calc(var(--pos-y, 0px) - 65px), 0) rotate(calc(var(--rot, 0deg) - 28deg)) skewY(15deg) scale(0.92);
+        filter: drop-shadow(0 30px 38px rgba(20, 15, 10, 0.22));
+        opacity: 0.85;
+      }
+      100% {
+        /* 第三阶段：撕离收纳垫，轻盈化风消散 */
+        transform: translate3d(calc(var(--pos-x, 0px) - 50px), calc(var(--pos-y, 0px) - 150px), 0) rotate(calc(var(--rot, 0deg) - 45deg)) scale(0.6);
+        filter: drop-shadow(0 40px 40px rgba(20, 15, 10, 0)) blur(2px);
+        opacity: 0;
+      }
+    }
+
+    .sticker-entity.peeling-off {
+      animation: stickerPeelOff 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+      pointer-events: none !important;
+      z-index: 9999 !important;
+    }
+
     /* 拖拽时的悬浮立体光影 */
     .sticker-entity.dragging {
       cursor: grabbing !important;

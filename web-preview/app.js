@@ -318,13 +318,16 @@ function renderStickersCanvas(isTriggerDrop = false) {
       }
 
       return `
-        <div class="sticker-entity ${dropClass}"
+        <div class="sticker-entity ${dropClass} cursor-pointer select-none"
           id="sticker-${g.id}"
           data-id="${g.id}"
           style="--pos-x: ${pos.x}px; --pos-y: ${pos.y}px; --rot: ${pos.rot}deg; --rot-start: ${pos.rotStart || (pos.rot + 25)}deg; --delay: ${idx}; transform: translate3d(${pos.x}px, ${pos.y}px, 0) rotate(${pos.rot}deg); z-index: ${pos.zIndex || 10 + idx}; width: 148px;">
           
+          <!-- 全区域点击感应层 (点击整个贴纸均可打开详情) -->
+          <div class="sticker-hitbox absolute inset-0 z-20 cursor-pointer"></div>
+
           <!-- 纯白描边贴纸实体 (悬浮立体手账感) -->
-          <div class="relative flex items-center justify-center pointer-events-none p-1">
+          <div class="relative flex items-center justify-center p-1 pointer-events-none">
             ${g.sticker_image_url 
               ? `<img src="${g.sticker_image_url}" class="max-h-28 max-w-full object-contain filter drop-shadow-md select-none pointer-events-none" alt="${g.name}">`
               : `<div class="w-20 h-20 bg-white border-2 border-stone-800 rounded-3xl flex items-center justify-center text-stone-900 shadow-md font-bold text-sm pointer-events-none">${g.name.slice(0, 3)}</div>`
@@ -408,7 +411,8 @@ function attachStickerDragEvents(container) {
         const dx = moveEvent.clientX - startX;
         const dy = moveEvent.clientY - startY;
 
-        if (!hasMoved && Math.hypot(dx, dy) > 4) {
+        // 提高拖拽位移阈值 (10px)，避免轻点贴纸图片时误判为拖拽
+        if (!hasMoved && Math.hypot(dx, dy) > 10) {
           hasMoved = true;
         }
 
@@ -443,7 +447,7 @@ function attachStickerDragEvents(container) {
         el.classList.remove('dragging');
 
         if (!hasMoved) {
-          // 点击：打开贴纸详情卡片
+          // 点击贴纸任何位置：打开贴纸详情卡片
           el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) scale(1) rotate(${pos.rot}deg)`;
           openGearDetailModal(gearId);
         } else {
@@ -465,6 +469,11 @@ function attachStickerDragEvents(container) {
       el.addEventListener('pointermove', onPointerMove);
       el.addEventListener('pointerup', onPointerUp);
       el.addEventListener('pointercancel', onPointerUp);
+    });
+
+    // 独立全贴纸点击监听 (确保点击贴纸图片主体、空白或文字一律打开弹窗)
+    el.addEventListener('click', (e) => {
+      openGearDetailModal(gearId);
     });
   });
 }
@@ -501,11 +510,35 @@ function openGearDetailModal(gearId) {
 
   const delBtn = document.getElementById('delete-gear-btn');
   delBtn.onclick = async () => {
-    if (confirm(`确定要从装备垫撕下删除 "${g.name}" 吗？`)) {
-      closeModal('modal-gear-detail');
-      await apiRequest(`/gears/${g.id}`, { method: 'DELETE' });
-      await loadGears();
+    // 立即收起详情弹窗，让用户视线聚焦在收纳垫上物理“撕除贴纸”动效
+    closeModal('modal-gear-detail');
+
+    const stickerEl = document.getElementById(`sticker-${g.id}`);
+    if (stickerEl) {
+      // 触发纸张单角掀起、发力撕离与飘散动效
+      stickerEl.classList.remove('settling', 'dropping', 'dragging');
+      stickerEl.classList.add('peeling-off');
     }
+
+    // 后台发起删除
+    try {
+      await apiRequest(`/gears/${g.id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('删除失败:', err);
+    }
+
+    // 撕下动画结束后 (520ms)，更新状态与界面
+    setTimeout(() => {
+      state.gears = state.gears.filter(item => item.id !== g.id);
+      delete state.positions[g.id];
+      saveStickerPositions();
+
+      const totalKg = ((state.gears.reduce((sum, item) => sum + item.weight_grams, 0)) / 1000).toFixed(1);
+      document.getElementById('stat-count-pill').textContent = `${state.gears.length} 件`;
+      document.getElementById('stat-weight-text').textContent = `总负重 ${totalKg} kg`;
+
+      renderStickersCanvas(false);
+    }, 520);
   };
 
   modal.style.zIndex = '99999';
