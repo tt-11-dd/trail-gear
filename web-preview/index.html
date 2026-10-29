@@ -198,7 +198,7 @@
       </section>
 
       <!-- ================= 页面 4：制作贴纸工坊 ================= -->
-      <section id="view-maker" class="p-4 space-y-3.5 hidden">
+      <section id="view-maker" class="p-4 pb-28 space-y-3.5 hidden">
         <div class="flex items-center justify-between pb-1">
           <div>
             <h2 class="text-base font-black text-stone-900 flex items-center gap-1.5">
@@ -206,13 +206,13 @@
             </h2>
             <p class="text-[11px] text-stone-500">上传照片自动压缩并生成白色贴纸</p>
           </div>
-          <button onclick="switchTab('closet')" class="w-7 h-7 rounded-full bg-stone-200/80 text-stone-600 flex items-center justify-center hover:bg-stone-300 text-sm">
-            <i class="fa-solid fa-xmark text-sm"></i>
+          <button onclick="switchTab('closet')" class="w-8 h-8 rounded-full bg-stone-200/90 text-stone-700 flex items-center justify-center hover:bg-stone-300 text-sm shadow-xs transition" title="返回贴纸墙">
+            <i class="fa-solid fa-xmark text-base"></i>
           </button>
         </div>
 
         <!-- 贴纸预览画布 -->
-        <div class="w-full h-56 bg-white border-2 border-dashed border-stone-300 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-sm cursor-pointer" onclick="document.getElementById('image-file-input').click()">
+        <div class="w-full h-52 bg-white border-2 border-dashed border-stone-300 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-sm cursor-pointer" onclick="document.getElementById('image-file-input').click()">
           <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden"></canvas>
           
           <div id="upload-placeholder" class="text-center p-6">
@@ -223,7 +223,7 @@
             <p class="text-[11px] text-stone-500 mt-1">智能去除背景并生成白色描边贴纸</p>
           </div>
 
-          <div id="change-photo-badge" class="absolute bottom-2.5 right-2.5 bg-stone-900/80 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-sm hidden flex items-center gap-1">
+          <div id="change-photo-badge" class="absolute bottom-2.5 right-2.5 bg-stone-900/80 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-sm hidden flex items-center gap-1 shadow-sm">
             <i class="fa-solid fa-arrow-rotate-right text-[9px]"></i> 更换照片
           </div>
           <input type="file" id="image-file-input" accept="image/*" class="hidden">
@@ -296,10 +296,19 @@
           </div>
         </div>
 
-        <button id="save-gear-btn" onclick="saveGearFromMaker()" 
-          class="w-full py-3.5 bg-pine-800 hover:bg-pine-900 text-white font-bold rounded-2xl shadow-sm transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-check"></i> 贴入装备柜
-        </button>
+        <!-- 常驻底部提交栏 (永远吸底、无需找寻、决不遮挡) -->
+        <div class="sticky bottom-2 inset-x-0 pt-2 z-40">
+          <div class="bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-stone-300/80 shadow-xl flex space-x-2">
+            <button type="button" onclick="switchTab('closet')" 
+              class="px-4 py-3 text-xs font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-xl transition">
+              取消
+            </button>
+            <button id="save-gear-btn" onclick="saveGearFromMaker()" 
+              class="flex-1 py-3 bg-pine-800 hover:bg-pine-900 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-98">
+              <i class="fa-solid fa-check"></i> 保存并贴入装备柜
+            </button>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -313,7 +322,7 @@
     </div>
 
     <!-- 底部悬浮双键极简底栏：【贴纸墙】与【打包清单】 -->
-    <div class="absolute bottom-5 inset-x-0 flex justify-center z-30 pointer-events-none">
+    <div id="dock-container" class="absolute bottom-5 inset-x-0 flex justify-center z-30 pointer-events-none">
       <nav class="bg-white/90 backdrop-blur-xl border border-stone-300/80 rounded-full px-4 py-2 flex items-center space-x-6 shadow-xl pointer-events-auto">
         <button onclick="switchTab('closet')" id="dock-closet" class="flex items-center space-x-2 text-pine-800 font-black text-xs px-3 py-1.5 rounded-full bg-pine-800/10 transition">
           <i class="fa-solid fa-layer-group text-sm"></i>

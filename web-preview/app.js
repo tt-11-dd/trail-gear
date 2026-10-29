@@ -782,8 +782,17 @@ function switchTab(tab) {
     if (el) el.classList.toggle('hidden', v !== tab);
   });
 
+  // FAB 仅在装备贴纸墙显示
   const fab = document.getElementById('fab-container');
   if (fab) fab.classList.toggle('hidden', tab !== 'closet');
+
+  // 底栏在制作贴纸时隐藏，避免阻挡保存按钮
+  const dock = document.getElementById('dock-container');
+  if (dock) dock.classList.toggle('hidden', tab === 'maker');
+
+  // 回滚主视口到顶部
+  const mainContent = document.getElementById('main-content');
+  if (mainContent) mainContent.scrollTop = 0;
 
   const dockCloset = document.getElementById('dock-closet');
   const dockTrips = document.getElementById('dock-trips');
