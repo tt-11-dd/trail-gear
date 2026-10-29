@@ -283,7 +283,7 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('✨ 贴纸已生成', style: TextStyle(fontWeight: FontWeight.black, fontSize: 16)),
+                        const Text('✨ 贴纸已生成', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                         TextButton.icon(
                           onPressed: () => setState(() => _generatedStickerFile = null),
                           icon: const Icon(Icons.refresh, size: 16),
@@ -382,18 +382,6 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
                       )
                     : const Text(
                         '✨ 生成贴纸并掉落到首页',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-              ),
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text(
-                        '保存到装备柜',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
               ),

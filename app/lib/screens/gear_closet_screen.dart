@@ -212,7 +212,7 @@ class _GearClosetScreenState extends State<GearClosetScreen> {
           children: [
             const Text(
               'TRAIL GEAR',
-              style: TextStyle(fontWeight: FontWeight.black, fontSize: 16, color: Color(0xFF171615)),
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF171615)),
             ),
             Text(
               '${_gears.length} 件装备 · 负重 $kgStr kg',
