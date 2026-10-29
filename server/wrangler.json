@@ -5,14 +5,14 @@
   "compatibility_date": "2026-10-29",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "JWT_SECRET": "trail-gear-dev-jwt-secret-key-32bytes-long!!",
+    "JWT_SECRET": "trail-gear-prod-secret-9d133e573ebdfba20f88bfbfb9506e7f!!",
     "PUBLIC_R2_URL": ""
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "trail-gear-db",
-      "database_id": "local-d1-id"
+      "database_id": "4f9eb9c7-556f-446a-9f8c-c22ae2149ae0"
     }
   ],
   "r2_buckets": [
