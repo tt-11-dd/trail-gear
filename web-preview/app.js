@@ -161,69 +161,96 @@ function toggleLayoutMode() {
   renderStickersCanvas(true);
 }
 
-// 重新散落：清除位置缓存，重新以有机丰富多样的角度从上方掉落
+// 重新散落：清除位置缓存，真正基于重力法则随机散落到装备垫各处并重力掉落
 function reshuffleScattered() {
   if (state.layoutMode !== 'scattered') return;
-  state.positions = {};
-  saveStickerPositions();
+  generateGravityScatterPositions(true);
   renderStickersCanvas(true);
 }
 
-// 为装备计算或恢复带有自然掉落感的物理坐标与角度 (严格约束在装备收纳垫框内，避开底部按钮)
-function getOrGenerateStickerPosition(gear, idx, total, forceRefresh = false) {
+// 真实物理重力散落引擎：在收纳垫纵向空间内自然沉降分布，每次点击都是全新布局
+function generateGravityScatterPositions(forceRandom = false) {
   const container = document.getElementById('stickers-container');
-  const trayWidth = container?.clientWidth || 340;
+  const w = container?.clientWidth || 340;
+  const h = Math.max(440, container?.clientHeight || 460);
 
-  if (!forceRefresh && state.positions[gear.id]) {
-    const existing = state.positions[gear.id];
-    if (existing.x !== undefined && existing.y !== undefined && existing.rot !== undefined) {
-      existing.x = Math.max(10, Math.min(Math.max(160, trayWidth - 146), existing.x));
-      // 自动修复老数据：如果贴纸之前掉得太低被底部按钮挡住，立即校准至安全可视区！
-      if (idx === 0 && existing.y > 150) existing.y = 16;
-      if (idx === 1 && existing.y > 170) existing.y = 24;
-      if (idx === 2 && existing.y > 200) existing.y = 135;
-      if (idx >= 3 && existing.y > (Math.floor(idx / 2) * 125 + 40)) {
-        existing.y = Math.floor(idx / 2) * 125 + 20;
+  const minX = 12;
+  const maxX = Math.max(minX + 20, w - 150);
+  const minY = 16;
+  const maxY = Math.max(minY + 60, h - 135);
+
+  const total = state.gears.length;
+  if (total === 0) return;
+
+  // 如果已有保存的有效布局且非主动强制随机，则优先复用已有拖拽位置
+  if (!forceRandom) {
+    let allValid = true;
+    for (const g of state.gears) {
+      if (!state.positions[g.id] || state.positions[g.id].x === undefined) {
+        allValid = false;
+        break;
       }
-      return existing;
     }
+    if (allValid) return;
   }
 
-  // 严格在装备垫框内两列错落分布
-  const col = idx % 2;
-  const row = Math.floor(idx / 2);
-  
-  const jitterX = Math.round((Math.random() * 12 - 6));
-  const jitterY = Math.round((Math.random() * 12 - 6));
+  // 真正的随机：打乱装备顺序，确保每次点击随机都是全新排布
+  const shuffledGears = [...state.gears].sort(() => Math.random() - 0.5);
 
-  // 左列 14~28px，右列 168~182px (严密约束在垫子框左右边框内)
-  const rawX = col === 0 ? (14 + Math.random() * 14 + jitterX) : (168 + Math.random() * 14 + jitterX);
-  // 紧凑行距 (125px)，前两行贴纸（前4件）保证严格在 180px 黄金安全区内，绝不落入底部按钮区！
-  const rawY = row * 125 + 14 + jitterY;
+  shuffledGears.forEach((g, idx) => {
+    // 纵向深度比率：在 0.05 到 0.95 之间全面展开，彻底打破“只在顶部”的限制！
+    const verticalSlot = (idx + 0.5) / total;
+    const jitterRatio = (Math.random() * 0.4 - 0.2) / total;
+    const depthRatio = Math.max(0.04, Math.min(0.96, verticalSlot + jitterRatio));
+    
+    const targetY = minY + depthRatio * (maxY - minY);
 
-  const posX = Math.max(10, Math.min(Math.max(160, trayWidth - 148), Math.round(rawX)));
-  const posY = row < 2 
-    ? Math.max(10, Math.min(175, Math.round(rawY)))
-    : Math.max(10, Math.round(rawY));
+    // 水平左右列与中轴错落散开
+    let targetX;
+    if (idx % 2 === 0) {
+      // 偏左侧或中左
+      targetX = minX + Math.random() * (w * 0.46 - minX);
+    } else {
+      // 偏右侧或中右
+      targetX = (w * 0.42) + Math.random() * (maxX - w * 0.42);
+    }
 
-  // 从丰富角度池中取样，消除单一角度
-  const angleIdx = (idx * 5 + (gear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length;
-  const baseAngle = ORGANIC_ANGLES[angleIdx];
-  const rot = Math.round(baseAngle + (Math.random() * 8 - 4));
-  
-  // 掉落初始翻转角
-  const rotStart = rot + (Math.random() > 0.5 ? 26 : -26);
+    const clampedX = Math.round(Math.max(minX, Math.min(maxX, targetX)));
+    const clampedY = Math.round(Math.max(minY, Math.min(maxY, targetY)));
 
-  const pos = {
-    x: posX,
-    y: posY,
-    rot,
-    rotStart,
-    zIndex: 10 + (idx % 20),
+    // 从丰富角度池中取样并增加自然微倾角 (-34° 到 +34°)
+    const angleIdx = Math.floor(Math.random() * ORGANIC_ANGLES.length);
+    const baseAngle = ORGANIC_ANGLES[angleIdx];
+    const rot = Math.round(baseAngle + (Math.random() * 10 - 5));
+
+    // 坠落初始翻转角 (重力加速旋转感)
+    const rotStart = rot + (Math.random() > 0.5 ? (30 + Math.random() * 20) : (-30 - Math.random() * 20));
+
+    state.positions[g.id] = {
+      x: clampedX,
+      y: clampedY,
+      rot: rot,
+      rotStart: rotStart,
+      zIndex: 10 + idx,
+    };
+  });
+
+  saveStickerPositions();
+}
+
+// 获取装备贴纸当前坐标 (带自愈与重力落点兜底)
+function getOrGenerateStickerPosition(gear, idx, total) {
+  if (state.positions[gear.id]) {
+    return state.positions[gear.id];
+  }
+  generateGravityScatterPositions(false);
+  return state.positions[gear.id] || {
+    x: 20,
+    y: 40 + idx * 80,
+    rot: ORGANIC_ANGLES[idx % ORGANIC_ANGLES.length],
+    rotStart: -25,
+    zIndex: 10 + idx,
   };
-
-  state.positions[gear.id] = pos;
-  return pos;
 }
 
 function renderStickersCanvas(isTriggerDrop = false) {
@@ -235,7 +262,7 @@ function renderStickersCanvas(isTriggerDrop = false) {
 
   if (state.gears.length === 0) {
     container.className = 'relative flex flex-col items-center justify-center py-16 text-stone-400';
-    container.style.height = 'auto';
+    container.style.height = '100%';
     container.innerHTML = `
       <i class="fa-solid fa-rug text-4xl mb-3 opacity-30 text-stone-500"></i>
       <p class="text-sm font-bold text-stone-700">装备收纳垫还是空的</p>
@@ -243,6 +270,9 @@ function renderStickersCanvas(isTriggerDrop = false) {
     `;
     return;
   }
+
+  // 确保所有装备均有重力分布坐标
+  generateGravityScatterPositions(false);
 
   if (state.layoutMode === 'grid') {
     // 【一键整理模式】：3列现代整齐网格陈列
@@ -271,11 +301,10 @@ function renderStickersCanvas(isTriggerDrop = false) {
   } else {
     // 【随性散落手账桌面模式】：重力掉落弹性质感 + 多角度自然摆放 + 任意拖动
     container.className = 'scattered-board transition-all duration-300';
+    container.style.height = '100%';
     
-    let maxY = 120;
     const htmlCards = state.gears.map((g, idx) => {
       const pos = getOrGenerateStickerPosition(g, idx, state.gears.length);
-      if (pos.y > maxY) maxY = pos.y;
 
       const weightStr = g.weight_grams >= 1000 
         ? `${(g.weight_grams / 1000).toFixed(1)} kg` 
@@ -313,9 +342,6 @@ function renderStickersCanvas(isTriggerDrop = false) {
       `;
     }).join('');
 
-    // 装备收纳垫高度严密自适应：贴纸高度约 120px，计算出紧凑高度，保证完全停留在底部快门按钮上方！
-    const dynamicMatHeight = Math.max(200, maxY + 135);
-    container.style.height = `${dynamicMatHeight}px`;
     container.innerHTML = htmlCards;
 
     // 绑定自由拖拽与点击事件
@@ -390,7 +416,7 @@ function attachStickerDragEvents(container) {
           const container = document.getElementById('stickers-container');
           const maxDragX = Math.max(160, (container?.clientWidth || 340) - 146);
           // 拖动时的下边界：严格停在收纳垫安全区内，绝不允许贴纸拖入底部按钮遮挡区
-          const maxDragY = Math.max(150, (container?.clientHeight || 260) - 125);
+          const maxDragY = Math.max(220, (container?.clientHeight || 460) - 120);
 
           // 严格将贴纸限制在垫子框安全范围内
           pos.x = Math.max(6, Math.min(maxDragX, Math.round(initialPosX + dx)));
@@ -537,10 +563,11 @@ async function toggleCameraFacing() {
   await startCamera();
 }
 
-// 核心快门拍照：从实时视频流捕获或调取相册
+// 核心快门拍照：从实时视频流捕获并按取景框竖屏精确裁切 (解决“取景框是竖的，生成的照片却是横的”问题)
 function takePhotoFromCamera() {
   const video = document.getElementById('camera-video');
   const flash = document.getElementById('camera-flash');
+  const targetBox = document.getElementById('camera-target-box');
 
   // 快门白光闪烁反馈
   if (flash) {
@@ -549,11 +576,47 @@ function takePhotoFromCamera() {
   }
 
   if (video && video.videoWidth > 0 && cameraStream) {
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+
+    const videoElRect = video.getBoundingClientRect();
+    const targetRect = targetBox ? targetBox.getBoundingClientRect() : videoElRect;
+
+    // 计算 video 在容器中的实际渲染缩放比 (object-cover)
+    const scale = Math.max(videoElRect.width / videoWidth, videoElRect.height / videoHeight);
+    const renderedWidth = videoWidth * scale;
+    const renderedHeight = videoHeight * scale;
+    const renderedLeft = (videoElRect.width - renderedWidth) / 2;
+    const renderedTop = (videoElRect.height - renderedHeight) / 2;
+
+    // 计算准星框在原视频像素坐标系中的相对裁切区域
+    const targetLeftOnScreen = targetRect.left - videoElRect.left;
+    const targetTopOnScreen = targetRect.top - videoElRect.top;
+
+    let srcX = (targetLeftOnScreen - renderedLeft) / scale;
+    let srcY = (targetTopOnScreen - renderedTop) / scale;
+    let srcW = targetRect.width / scale;
+    let srcH = targetRect.height / scale;
+
+    // 边界钳制
+    srcX = Math.max(0, Math.min(videoWidth - 10, srcX));
+    srcY = Math.max(0, Math.min(videoHeight - 10, srcY));
+    srcW = Math.max(50, Math.min(videoWidth - srcX, srcW));
+    srcH = Math.max(50, Math.min(videoHeight - srcY, srcH));
+
+    // 输出为高品质竖屏贴纸原图 (宽高比严密匹配取景准星竖框)
     const capCanvas = document.createElement('canvas');
-    capCanvas.width = video.videoWidth;
-    capCanvas.height = video.videoHeight;
+    capCanvas.width = 640;
+    capCanvas.height = Math.round(640 * (srcH / srcW));
     const capCtx = capCanvas.getContext('2d');
-    capCtx.drawImage(video, 0, 0, capCanvas.width, capCanvas.height);
+
+    // 若为前置镜头自拍，水平镜像以与取景器预览完全一致
+    if (currentFacingMode === 'user') {
+      capCtx.translate(capCanvas.width, 0);
+      capCtx.scale(-1, 1);
+    }
+
+    capCtx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, capCanvas.width, capCanvas.height);
 
     const capturedImg = new Image();
     capturedImg.onload = () => {
@@ -562,7 +625,7 @@ function takePhotoFromCamera() {
       stopCamera();
       switchView('maker');
     };
-    capturedImg.src = capCanvas.toDataURL('image/jpeg', 0.92);
+    capturedImg.src = capCanvas.toDataURL('image/jpeg', 0.95);
   } else {
     // 无实时视频流时，调用系统原生相机/相册选择
     document.getElementById('image-file-input').click();
@@ -792,17 +855,12 @@ async function saveGearFromMaker() {
 
       const container = document.getElementById('stickers-container');
       const trayWidth = container?.clientWidth || 340;
+      const trayHeight = Math.max(440, container?.clientHeight || 460);
       
       const count = state.gears.length;
-      const col = count % 2;
-      const row = Math.floor(count / 2);
-      const targetX = col === 0 
-        ? Math.round(14 + Math.random() * 18) 
-        : Math.min(trayWidth - 148, Math.round(168 + Math.random() * 18));
-      // 严格避开底部按钮！前两行限制在 Y <= 215px 可视黄金安全区内，绝不落入底部遮挡区
-      const targetY = row < 2 
-        ? Math.min(210, row * 128 + 14) 
-        : Math.min(row * 135 + 16, 380);
+      const targetX = Math.round(16 + Math.random() * (trayWidth - 165));
+      // 重力着陆落点：在收纳垫整体纵深内自然降落
+      const targetY = Math.round(30 + Math.random() * (trayHeight - 165));
 
       const rot = ORGANIC_ANGLES[(count * 3 + (createdGear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length];
       const rotStart = rot + (Math.random() > 0.5 ? 32 : -32);
