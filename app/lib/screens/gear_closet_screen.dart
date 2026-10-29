@@ -38,8 +38,8 @@ class _GearClosetScreenState extends State<GearClosetScreen> {
       if (!_positions.containsKey(g.id)) {
         final col = i % 2;
         final row = i ~/ 2;
-        final dx = col == 0 ? 20.0 + (i * 13 % 25) : 180.0 + (i * 17 % 25);
-        final dy = row * 160.0 + 20.0 + (i * 11 % 20);
+        final dx = col == 0 ? 18.0 + (i * 13 % 20) : 172.0 + (i * 17 % 20);
+        final dy = row < 2 ? math.min(220.0, row * 130.0 + 16.0) : row * 130.0 + 16.0;
         _positions[g.id] = Offset(dx, dy);
         _rotations[g.id] = _anglePool[(i * 3 + g.name.hashCode.abs()) % _anglePool.length];
       }

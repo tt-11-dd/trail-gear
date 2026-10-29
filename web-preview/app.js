@@ -166,31 +166,39 @@ function reshuffleScattered() {
   renderStickersCanvas(true);
 }
 
-// 为装备计算或恢复带有自然掉落感的物理坐标与角度 (严格约束在装备收纳垫框内)
+// 为装备计算或恢复带有自然掉落感的物理坐标与角度 (严格约束在装备收纳垫框内，避开底部按钮)
 function getOrGenerateStickerPosition(gear, idx, total, forceRefresh = false) {
+  const container = document.getElementById('stickers-container');
+  const trayWidth = container?.clientWidth || 340;
+
   if (!forceRefresh && state.positions[gear.id]) {
     const existing = state.positions[gear.id];
     if (existing.x !== undefined && existing.y !== undefined && existing.rot !== undefined) {
+      existing.x = Math.max(10, Math.min(Math.max(160, trayWidth - 146), existing.x));
+      // 自动修复老数据：如果贴纸之前掉得太低被底部按钮挡住，立即校准至安全可视区！
+      if (idx === 0 && existing.y > 160) existing.y = 16;
+      if (idx === 1 && existing.y > 180) existing.y = 24;
+      if (idx === 2 && existing.y > 230) existing.y = 145;
       return existing;
     }
   }
-
-  const container = document.getElementById('stickers-container');
-  const trayWidth = container?.clientWidth || 340;
 
   // 严格在装备垫框内两列错落分布
   const col = idx % 2;
   const row = Math.floor(idx / 2);
   
-  const jitterX = Math.round((Math.random() * 18 - 9));
-  const jitterY = Math.round((Math.random() * 20 - 10));
+  const jitterX = Math.round((Math.random() * 14 - 7));
+  const jitterY = Math.round((Math.random() * 14 - 7));
 
-  // 左列 12~30px，右列 168~185px (右边界 185 + 144 = 329px 严密约束在框内)
-  const rawX = col === 0 ? (12 + Math.random() * 16 + jitterX) : (168 + Math.random() * 16 + jitterX);
-  const rawY = row * 155 + 14 + jitterY;
+  // 左列 14~28px，右列 168~182px (严密约束在垫子框左右边框内)
+  const rawX = col === 0 ? (14 + Math.random() * 14 + jitterX) : (168 + Math.random() * 14 + jitterX);
+  // 适度紧凑行距 (130px)，前两行贴纸（前4件）保证严格在 220px 黄金安全区内，绝不落入底部按钮区！
+  const rawY = row * 130 + 14 + jitterY;
 
   const posX = Math.max(10, Math.min(Math.max(160, trayWidth - 148), Math.round(rawX)));
-  const posY = Math.max(12, Math.round(rawY));
+  const posY = row < 2 
+    ? Math.max(10, Math.min(220, Math.round(rawY)))
+    : Math.max(10, Math.round(rawY));
 
   // 从丰富角度池中取样，消除单一角度
   const angleIdx = (idx * 5 + (gear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length;
@@ -373,10 +381,12 @@ function attachStickerDragEvents(container) {
         if (hasMoved) {
           const container = document.getElementById('stickers-container');
           const maxDragX = Math.max(160, (container?.clientWidth || 340) - 146);
+          // 拖动时的下边界：严格停在收纳垫安全区内，绝不允许贴纸拖入底部按钮遮挡区
+          const maxDragY = Math.max(220, (container?.clientHeight || 440) - 130);
 
-          // 严格将贴纸限制在垫子框范围内，绝不脱离框
+          // 严格将贴纸限制在垫子框安全范围内
           pos.x = Math.max(6, Math.min(maxDragX, Math.round(initialPosX + dx)));
-          pos.y = Math.max(6, Math.round(initialPosY + dy));
+          pos.y = Math.max(6, Math.min(maxDragY, Math.round(initialPosY + dy)));
 
           // 依据拖动速度产生真实物理跟随微倾角
           const vx = moveEvent.clientX - lastClientX;
@@ -816,7 +826,10 @@ async function saveGearFromMaker() {
       const targetX = col === 0 
         ? Math.round(14 + Math.random() * 18) 
         : Math.min(trayWidth - 148, Math.round(168 + Math.random() * 18));
-      const targetY = Math.min(row * 155 + 16, 420);
+      // 严格避开底部按钮！前两行限制在 Y <= 215px 可视黄金安全区内，绝不落入底部遮挡区
+      const targetY = row < 2 
+        ? Math.min(210, row * 128 + 14) 
+        : Math.min(row * 135 + 16, 380);
 
       const rot = ORGANIC_ANGLES[(count * 3 + (createdGear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length];
       const rotStart = rot + (Math.random() > 0.5 ? 32 : -32);
