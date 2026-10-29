@@ -527,7 +527,7 @@ function openGearDetailModal(gearId) {
       console.warn('删除失败:', err);
     }
 
-    // 撕下动画结束后 (520ms)，更新状态与界面
+    // 撕下动画结束后 (820ms)，更新状态与界面
     setTimeout(() => {
       state.gears = state.gears.filter(item => item.id !== g.id);
       delete state.positions[g.id];
@@ -538,7 +538,7 @@ function openGearDetailModal(gearId) {
       document.getElementById('stat-weight-text').textContent = `总负重 ${totalKg} kg`;
 
       renderStickersCanvas(false);
-    }, 520);
+    }, 820);
   };
 
   modal.style.zIndex = '99999';
