@@ -99,7 +99,18 @@ class StickerGenerator {
       dstY: padding,
     );
 
-    return Uint8List.fromList(img.encodePng(canvas));
+    // 6. 贴纸规格化压缩：超过 800px 时等比缩放并压缩，大幅节约传输带宽与存储
+    img.Image finalCanvas = canvas;
+    const int maxDim = 800;
+    if (canvas.width > maxDim || canvas.height > maxDim) {
+      if (canvas.width > canvas.height) {
+        finalCanvas = img.copyResize(canvas, width: maxDim);
+      } else {
+        finalCanvas = img.copyResize(canvas, height: maxDim);
+      }
+    }
+
+    return Uint8List.fromList(img.encodePng(finalCanvas, level: 6));
   }
 
   /// 保存贴纸至本地沙盒

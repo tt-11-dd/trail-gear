@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Trail Gear — 现代高级黑金户外装备柜</title>
+  <title>Trail Gear — 现代山系装备柜与行程贴纸</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
@@ -11,25 +11,24 @@
       theme: {
         extend: {
           colors: {
-            obsidian: {
-              950: '#0C0A09',
-              900: '#141210',
-              850: '#1A1715',
-              800: '#221F1C',
-              750: '#2A2622',
-              700: '#38332E',
+            chalk: {
+              50: '#FBFBFA',
+              100: '#F5F4F0',
+              200: '#EBE8E1',
+              300: '#DED9CE',
             },
-            champagne: {
-              100: '#FAF4ED',
-              200: '#F3E8DD',
-              300: '#E7D5C4',
-              400: '#D5BC9F',
-              500: '#C2A17E',
+            pine: {
+              700: '#234436',
+              800: '#1A362B',
+              900: '#12261E',
             },
-            sand: {
-              400: '#A49B90',
-              500: '#8E857A',
-              600: '#756D63',
+            terracotta: {
+              500: '#C25D34',
+              600: '#A94B25',
+            },
+            stone: {
+              800: '#262422',
+              900: '#171615',
             }
           },
           fontFamily: {
@@ -41,28 +40,38 @@
   </script>
   <style>
     body {
-      background-color: #080706;
-      color: #F3E8DD;
+      background-color: #E7E4DC;
+      color: #171615;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
     .phone-container {
       width: 100%;
-      max-width: 416px;
+      max-width: 414px;
       height: 870px;
       max-height: 96vh;
-      border-radius: 48px;
-      box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.95), 0 0 0 10px #181513, 0 0 0 12px #26221E;
+      border-radius: 46px;
+      box-shadow: 0 30px 70px -15px rgba(35, 30, 25, 0.22), 0 0 0 10px #D8D4CA, 0 0 0 12px #C5C0B4;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       position: relative;
-      background: #141210;
+      background: #F5F4F0;
     }
-    .card-dark {
-      background-color: #211E1A;
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      border-radius: 26px;
+    /* 山系手账网格布底纹 */
+    .camp-mat-stage {
+      background-color: #EBE7DF;
+      background-image: radial-gradient(#D5D0C5 1.2px, transparent 1.2px);
+      background-size: 14px 14px;
+      border: 1px solid #DFD9CE;
+      border-radius: 28px;
+    }
+    /* 现代明亮卡片 */
+    .card-modern {
+      background-color: #FFFFFF;
+      border: 1px solid rgba(220, 215, 205, 0.8);
+      border-radius: 24px;
+      box-shadow: 0 4px 16px -2px rgba(26, 23, 20, 0.04);
     }
     .num-display {
       font-variant-numeric: tabular-nums;
@@ -75,63 +84,69 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    /* 贴纸在浅色底上的立体投影 */
     .sticker-floating {
-      filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+      filter: drop-shadow(0 6px 10px rgba(40, 35, 28, 0.16));
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .sticker-floating:hover {
       transform: scale(1.08) rotate(0deg) !important;
+      filter: drop-shadow(0 12px 20px rgba(40, 35, 28, 0.22));
       z-index: 30;
     }
-    .frosted-dock {
-      background: rgba(33, 30, 26, 0.82);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+    /* 悬浮毛玻璃底栏 */
+    .frosted-dock-light {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
       border-radius: 36px;
+      box-shadow: 0 10px 30px -4px rgba(45, 38, 30, 0.12);
     }
   </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
 
-  <!-- 模拟高端手机外壳 -->
+  <!-- 模拟手机外壳 -->
   <div class="phone-container">
     
     <!-- 顶部状态栏与灵动岛 -->
-    <div class="pt-3.5 px-7 pb-2 flex justify-between items-center z-30 select-none bg-obsidian-900">
-      <span class="text-xs font-bold text-[#E7D5C4] num-display" id="clock-display">12:55</span>
-      <div class="w-24 h-4 bg-black rounded-full mx-auto"></div>
-      <div class="flex items-center space-x-2 text-xs text-[#A49B90]">
-        <i class="fa-solid fa-plane text-[10px]"></i>
+    <div class="pt-3.5 px-7 pb-2 flex justify-between items-center z-30 select-none bg-chalk-100">
+      <span class="text-xs font-bold text-stone-900 num-display" id="clock-display">09:41</span>
+      <div class="w-24 h-4 bg-stone-900 rounded-full mx-auto"></div>
+      <div class="flex items-center space-x-2 text-xs text-stone-700">
+        <i class="fa-solid fa-signal text-[10px]"></i>
         <i class="fa-solid fa-wifi text-[10px]"></i>
         <i class="fa-solid fa-battery-full text-xs"></i>
       </div>
     </div>
 
-    <!-- 顶部主标题与时间筛选栏（参考图风格） -->
-    <div class="px-6 pt-3 pb-2 z-20 flex justify-between items-end bg-obsidian-900">
+    <!-- 顶部主标题：现代山系品牌调性 -->
+    <div class="px-6 pt-3 pb-2 z-20 flex justify-between items-end bg-chalk-100">
       <div>
-        <h1 class="text-2xl font-black tracking-tight text-champagne-200" id="header-title">装备</h1>
-        <p class="text-[11px] text-sand-500 font-medium mt-0.5" id="header-subtitle">Trail Gear · 贴纸化装备库</p>
+        <div class="flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-pine-800"></span>
+          <span class="text-[10px] font-bold tracking-widest text-pine-800 uppercase">TRAIL GEAR STUDIO</span>
+        </div>
+        <h1 class="text-2xl font-black tracking-tight text-stone-900 mt-0.5" id="header-title">装备收纳</h1>
       </div>
 
-      <!-- 右侧日期胶囊与操作按钮 -->
+      <!-- 右侧行程季胶囊与新建按钮 -->
       <div class="flex items-center space-x-2">
-        <div class="bg-obsidian-800 text-sand-400 text-[11px] font-semibold px-3 py-1 rounded-full border border-white/5 flex items-center space-x-2">
-          <i class="fa-solid fa-chevron-left text-[9px] cursor-pointer hover:text-champagne-200"></i>
-          <span id="season-badge" class="text-champagne-200">2026年 徒步季</span>
-          <i class="fa-solid fa-chevron-right text-[9px] cursor-pointer hover:text-champagne-200"></i>
+        <div class="bg-chalk-200/80 text-stone-700 text-[11px] font-semibold px-3 py-1 rounded-full border border-chalk-300 flex items-center space-x-2">
+          <i class="fa-solid fa-compass text-[10px] text-pine-800"></i>
+          <span id="season-badge" class="font-bold text-stone-900">2026 行程规划</span>
         </div>
-        <button onclick="openMakerWithPreset()" class="w-7 h-7 rounded-full bg-obsidian-800 border border-white/5 flex items-center justify-center text-champagne-300 hover:bg-obsidian-750 transition" title="做贴纸">
-          <i class="fa-solid fa-plus text-xs"></i>
+        <button onclick="openMakerWithPreset()" class="w-8 h-8 rounded-full bg-pine-800 text-white flex items-center justify-center hover:bg-pine-900 transition shadow-sm" title="做贴纸">
+          <i class="fa-solid fa-camera text-xs"></i>
         </button>
       </div>
     </div>
 
-    <!-- 分类 / 周期切片 Segmented Control（复刻图上的【周 / 月 / 年】高质感胶囊） -->
-    <div class="px-6 py-2 bg-obsidian-900 z-20">
+    <!-- 分类横滑胶囊条 (现代山系纯净质感) -->
+    <div class="px-6 py-2 bg-chalk-100 z-20">
       <div class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5" id="category-segmented">
-        <button class="seg-btn active px-3.5 py-1 rounded-full text-xs font-bold transition bg-champagne-200 text-obsidian-900 shadow-sm whitespace-nowrap" data-id="">
+        <button class="seg-btn active px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-pine-800 text-white shadow-sm" data-id="">
           全部
         </button>
         <!-- 动态分类按钮 -->
@@ -139,77 +154,95 @@
     </div>
 
     <!-- 主展示区 (可滚动) -->
-    <main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-28 pt-2 space-y-4 relative" id="main-content">
+    <main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-28 pt-2 space-y-3.5 relative" id="main-content">
       
-      <!-- ================= 页面 1：装备柜与统计 (复刻设计) ================= -->
+      <!-- ================= 页面 1：装备柜 (山系明亮美学) ================= -->
       <section id="view-closet" class="space-y-3.5 block">
         
-        <!-- 核心高光：贴纸手账集展台 (Sticker Showcase Stage，直接复刻参考图顶部的贴纸群) -->
-        <div class="card-dark p-4 relative overflow-hidden group">
+        <!-- 独特高光：山野营地装备陈列垫 (Gear Mat Stage) -->
+        <div class="camp-mat-stage p-4 relative overflow-hidden group">
           <div class="flex justify-between items-center mb-1">
-            <span class="text-[11px] font-bold text-sand-500 uppercase tracking-wider flex items-center gap-1.5">
-              <i class="fa-solid fa-sparkles text-champagne-400"></i> 贴纸展台 · COLLECTION
+            <span class="text-[10px] font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-layer-group text-pine-800"></i> CAMPING GEAR MAT · 装备陈列垫
             </span>
-            <span class="text-[10px] text-champagne-300 font-bold bg-white/5 px-2 py-0.5 rounded-full" id="sticker-stage-count">
-              0 件装备
+            <span class="text-[10px] text-pine-900 font-bold bg-white/70 px-2 py-0.5 rounded-full border border-stone-300/60" id="sticker-stage-count">
+              0 件好物
             </span>
           </div>
 
-          <!-- 贴纸有机聚落舞台 (Sticker Cluster) -->
-          <div class="w-full h-40 bg-obsidian-900/60 rounded-2xl p-2 relative flex items-center justify-center overflow-hidden border border-white/5" id="sticker-stage">
-            <!-- 贴纸元素动态散落排列 -->
+          <!-- 贴纸自然散落聚落 (Sticker Cluster) -->
+          <div class="w-full h-44 rounded-2xl relative flex items-center justify-center overflow-hidden" id="sticker-stage">
+            <!-- 贴纸元素动态散落陈列 -->
           </div>
 
-          <div class="mt-2 text-center">
-            <button onclick="openMakerWithPreset()" class="text-[11px] text-champagne-300/80 hover:text-champagne-200 font-medium flex items-center justify-center gap-1 mx-auto transition">
-              <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> 拍照制作新装备贴纸
+          <div class="mt-1 flex justify-center">
+            <button onclick="openMakerWithPreset()" class="text-[11px] text-pine-800 font-bold hover:underline flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full shadow-sm">
+              <i class="fa-solid fa-plus text-[10px]"></i> 拍照制作新装备贴纸
             </button>
           </div>
         </div>
 
-        <!-- 指标卡片 1：总件数 & 总重量 (直接复刻参考图【总杯数 12 / 总花销 192.9】) -->
-        <div class="card-dark p-5 grid grid-cols-2 gap-4">
+        <!-- 现代户外数据看板 1：总件数 & 整体背负重量 -->
+        <div class="card-modern p-5 grid grid-cols-2 gap-4">
           <div>
-            <p class="text-xs font-medium text-sand-500">总件数</p>
+            <div class="flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-pine-800"></span>
+              <p class="text-[11px] font-bold text-stone-600 uppercase tracking-wider">TOTAL PIECES</p>
+            </div>
+            <p class="text-xs text-stone-500 mt-0.5">总装备数</p>
             <div class="mt-1 flex items-baseline space-x-1">
-              <span class="text-3xl font-black text-champagne-200 num-display" id="stat-total-count">0</span>
-              <span class="text-xs text-sand-500 font-medium">件</span>
+              <span class="text-3xl font-black text-stone-900 num-display" id="stat-total-count">0</span>
+              <span class="text-xs text-stone-500 font-medium">件</span>
             </div>
           </div>
-          <div>
-            <p class="text-xs font-medium text-sand-500">总重量</p>
+
+          <div class="border-l border-chalk-200/80 pl-4">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-terracotta-500"></span>
+              <p class="text-[11px] font-bold text-stone-600 uppercase tracking-wider">PACK WEIGHT</p>
+            </div>
+            <p class="text-xs text-stone-500 mt-0.5">装备总重量</p>
             <div class="mt-1 flex items-baseline space-x-1">
-              <span class="text-3xl font-black text-champagne-200 num-display" id="stat-total-weight">0.0</span>
-              <span class="text-xs text-sand-500 font-medium">kg</span>
+              <span class="text-3xl font-black text-stone-900 num-display" id="stat-total-weight">0.0</span>
+              <span class="text-xs text-stone-500 font-medium">kg</span>
             </div>
           </div>
         </div>
 
-        <!-- 指标卡片 2：基础重量 & 消耗品 (复刻参考图【总咖啡因 900mg / 日均 64mg】) -->
-        <div class="card-dark p-5 grid grid-cols-2 gap-4">
+        <!-- 现代户外数据看板 2：基础重量 & UL 轻量评级 -->
+        <div class="card-modern p-5 grid grid-cols-2 gap-4">
           <div>
-            <p class="text-xs font-medium text-sand-500">基础重量 (BW)</p>
+            <div class="flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-stone-500"></span>
+              <p class="text-[11px] font-bold text-stone-600 uppercase tracking-wider">BASE WEIGHT (BW)</p>
+            </div>
+            <p class="text-xs text-stone-500 mt-0.5">基础重量 (无消耗品)</p>
             <div class="mt-1 flex items-baseline space-x-1">
-              <span class="text-3xl font-black text-champagne-200 num-display" id="stat-base-weight">0.0</span>
-              <span class="text-xs text-sand-500 font-medium">kg</span>
+              <span class="text-3xl font-black text-pine-800 num-display" id="stat-base-weight">0.0</span>
+              <span class="text-xs text-stone-500 font-medium">kg</span>
             </div>
           </div>
-          <div>
-            <p class="text-xs font-medium text-sand-500">背负级别</p>
+
+          <div class="border-l border-chalk-200/80 pl-4">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              <p class="text-[11px] font-bold text-stone-600 uppercase tracking-wider">GRADE</p>
+            </div>
+            <p class="text-xs text-stone-500 mt-0.5">负重评级</p>
             <div class="mt-1 flex items-baseline space-x-1">
-              <span class="text-3xl font-black text-champagne-200 num-display" id="stat-ul-level">UL</span>
-              <span class="text-xs text-sand-500 font-medium">轻量化</span>
+              <span class="text-3xl font-black text-stone-900 num-display" id="stat-ul-level">UL</span>
+              <span class="text-xs text-pine-800 font-bold ml-1" id="stat-ul-desc">轻量徒步</span>
             </div>
           </div>
         </div>
 
-        <!-- 装备列表栏 (单件卡片流) -->
-        <div class="pt-2">
-          <div class="flex justify-between items-center mb-3 px-1">
-            <span class="text-xs font-bold text-sand-400">所有装备明细</span>
+        <!-- 装备列表栏 (贴纸卡片流) -->
+        <div class="pt-1">
+          <div class="flex justify-between items-center mb-2.5 px-1">
+            <span class="text-xs font-black text-stone-800">全部装备明细</span>
             <div class="relative w-36">
               <input type="text" id="search-input" placeholder="搜索装备..." 
-                class="w-full bg-obsidian-800 text-xs px-2.5 py-1 rounded-full border border-white/5 text-champagne-200 placeholder-sand-600 focus:outline-none focus:border-champagne-400">
+                class="w-full bg-white text-xs px-3 py-1 rounded-full border border-stone-300/80 text-stone-900 placeholder-stone-400 focus:outline-none focus:border-pine-800 shadow-sm">
             </div>
           </div>
 
@@ -222,8 +255,11 @@
       <!-- ================= 页面 2：行程打包清单 ================= -->
       <section id="view-trips" class="space-y-3.5 hidden">
         <div class="flex justify-between items-center px-1">
-          <h2 class="text-sm font-bold text-champagne-200">徒步行程与打包清单</h2>
-          <button onclick="openCreateTripModal()" class="text-xs bg-champagne-200 text-obsidian-950 font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow transition hover:bg-white">
+          <div>
+            <h2 class="text-sm font-black text-stone-900">徒步行程记录</h2>
+            <p class="text-[11px] text-stone-500">打包检查与重力管理</p>
+          </div>
+          <button onclick="openCreateTripModal()" class="text-xs bg-pine-800 text-white font-bold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm hover:bg-pine-900 transition">
             <i class="fa-solid fa-plus text-[10px]"></i> 新建行程
           </button>
         </div>
@@ -233,30 +269,33 @@
         </div>
       </section>
 
-      <!-- ================= 页面 3：高级贴纸工坊 (Studio) ================= -->
+      <!-- ================= 页面 3：贴纸工坊 (Studio) ================= -->
       <section id="view-maker" class="space-y-4 hidden">
         <div class="flex items-center justify-between pb-1">
-          <h2 class="text-sm font-bold text-champagne-200 flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles text-champagne-400"></i> 贴纸工坊制作
-          </h2>
-          <button onclick="switchTab('closet')" class="text-sand-500 hover:text-champagne-200 text-sm">
-            <i class="fa-solid fa-xmark text-base"></i>
+          <div>
+            <h2 class="text-base font-black text-stone-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles text-pine-800"></i> 贴纸工坊制作
+            </h2>
+            <p class="text-[11px] text-stone-500">智能抠图 + 白色压边贴纸</p>
+          </div>
+          <button onclick="switchTab('closet')" class="w-7 h-7 rounded-full bg-chalk-200 text-stone-600 flex items-center justify-center hover:bg-chalk-300 text-sm">
+            <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
 
-        <!-- 贴纸画布暗调舞台 -->
-        <div class="w-full h-56 bg-obsidian-900 border border-white/10 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-2xl group cursor-pointer" onclick="document.getElementById('image-file-input').click()">
-          <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden filter drop-shadow-2xl"></canvas>
+        <!-- 贴纸画布：模拟自然裁切台 -->
+        <div class="w-full h-56 bg-chalk-100 border-2 border-dashed border-stone-300 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-inner group cursor-pointer" onclick="document.getElementById('image-file-input').click()">
+          <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden filter drop-shadow-md"></canvas>
           
           <div id="upload-placeholder" class="text-center p-6">
-            <div class="w-14 h-14 bg-obsidian-800 text-champagne-300 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-white/5 group-hover:scale-105 transition">
+            <div class="w-14 h-14 bg-white text-pine-800 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-stone-200 shadow-sm group-hover:scale-105 transition">
               <i class="fa-solid fa-camera text-2xl"></i>
             </div>
-            <p class="text-sm font-bold text-champagne-200">点击上传装备照片</p>
-            <p class="text-[11px] text-sand-500 mt-1">自动进行暗调背景去除并生成圆润贴纸白边</p>
+            <p class="text-sm font-bold text-stone-900">点击上传装备照片</p>
+            <p class="text-[11px] text-stone-500 mt-1">自动识别物品轮廓并生成圆润贴纸白边</p>
           </div>
 
-          <div id="change-photo-badge" class="absolute bottom-2.5 right-2.5 bg-obsidian-800/90 text-champagne-200 text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10 hidden flex items-center gap-1">
+          <div id="change-photo-badge" class="absolute bottom-2.5 right-2.5 bg-stone-900/80 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-sm hidden flex items-center gap-1 shadow-sm">
             <i class="fa-solid fa-arrow-rotate-right text-[9px]"></i> 更换照片
           </div>
           <input type="file" id="image-file-input" accept="image/*" class="hidden">
@@ -265,82 +304,93 @@
         <!-- 快捷操作与预设选择 -->
         <div class="flex items-center justify-between text-xs px-1">
           <button type="button" onclick="document.getElementById('image-file-input').click()" 
-            class="bg-obsidian-800 hover:bg-obsidian-750 text-champagne-200 font-bold px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-upload text-[11px]"></i> 本地照片
+            class="bg-white hover:bg-chalk-50 text-stone-900 font-bold px-3 py-1.5 rounded-xl border border-stone-300 flex items-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-upload text-[11px] text-pine-800"></i> 上传我的照片
           </button>
           
-          <div class="flex items-center gap-1.5 text-[11px] text-sand-500">
+          <div class="flex items-center gap-1.5 text-[11px] text-stone-600">
             <span>试一试:</span>
-            <button type="button" onclick="loadGearPreset('tent')" class="px-2 py-0.5 bg-obsidian-800 hover:bg-obsidian-700 text-champagne-300 rounded-md border border-white/5 font-medium">⛺️ 帐篷</button>
-            <button type="button" onclick="loadGearPreset('pack')" class="px-2 py-0.5 bg-obsidian-800 hover:bg-obsidian-700 text-champagne-300 rounded-md border border-white/5 font-medium">🎒 背包</button>
-            <button type="button" onclick="loadGearPreset('stove')" class="px-2 py-0.5 bg-obsidian-800 hover:bg-obsidian-700 text-champagne-300 rounded-md border border-white/5 font-medium">🫖 炉头</button>
-            <button type="button" onclick="loadGearPreset('cup')" class="px-2 py-0.5 bg-obsidian-800 hover:bg-obsidian-700 text-champagne-300 rounded-md border border-white/5 font-medium">☕️ 钛杯</button>
+            <button type="button" onclick="loadGearPreset('tent')" class="px-2 py-0.5 bg-white hover:bg-chalk-200 text-stone-800 rounded-md border border-stone-300 font-medium shadow-2xs">⛺️ 帐篷</button>
+            <button type="button" onclick="loadGearPreset('pack')" class="px-2 py-0.5 bg-white hover:bg-chalk-200 text-stone-800 rounded-md border border-stone-300 font-medium shadow-2xs">🎒 背包</button>
+            <button type="button" onclick="loadGearPreset('stove')" class="px-2 py-0.5 bg-white hover:bg-chalk-200 text-stone-800 rounded-md border border-stone-300 font-medium shadow-2xs">🫖 气炉</button>
+            <button type="button" onclick="loadGearPreset('cup')" class="px-2 py-0.5 bg-white hover:bg-chalk-200 text-stone-800 rounded-md border border-stone-300 font-medium shadow-2xs">☕️ 钛杯</button>
           </div>
         </div>
 
+        <!-- 压缩与传输状态指示条 -->
+        <div id="compression-badge" class="bg-chalk-100 text-[11px] text-stone-600 px-3.5 py-1.5 rounded-xl border border-stone-200/80 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-medium text-stone-700">
+            <i class="fa-solid fa-file-zipper text-terracotta-500"></i>
+            <span id="compress-info-text">自动压缩引擎：裁剪边缘 + 限制 800px 极速上传</span>
+          </span>
+          <span class="text-[10px] text-pine-800 font-bold bg-white px-2 py-0.5 rounded border border-stone-200" id="compress-size-pill">
+            省流量 92%
+          </span>
+        </div>
+
         <!-- 控制选项 -->
-        <div class="card-dark p-4 space-y-3">
+        <div class="card-modern p-4 space-y-3">
           <div class="flex items-center justify-between">
             <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="auto-cutout-toggle" checked class="w-4 h-4 text-champagne-400 bg-obsidian-900 border-white/20 rounded focus:ring-0">
-              <span class="text-xs font-bold text-champagne-200">自动智能抠图 (去除纯色背景)</span>
+              <input type="checkbox" id="auto-cutout-toggle" checked class="w-4 h-4 text-pine-800 rounded border-stone-300 focus:ring-pine-800">
+              <span class="text-xs font-bold text-stone-900">自动智能抠图 (去除拍摄背景)</span>
             </label>
-            <span class="text-[10px] text-champagne-400 bg-champagne-400/10 px-2 py-0.5 rounded-full font-bold">边缘分割</span>
+            <span class="text-[10px] text-pine-800 bg-pine-800/10 px-2 py-0.5 rounded-full font-bold">端侧边缘分割</span>
           </div>
 
-          <div class="pt-2 border-t border-white/5">
-            <div class="flex justify-between items-center text-xs font-bold text-champagne-200 mb-1.5">
-              <span class="text-sand-500">贴纸白边厚度</span>
-              <span id="stroke-val" class="text-champagne-300 font-bold">14 px</span>
+          <div class="pt-2 border-t border-chalk-200">
+            <div class="flex justify-between items-center text-xs font-bold text-stone-900 mb-1.5">
+              <span class="text-stone-600">贴纸白色描边厚度</span>
+              <span id="stroke-val" class="text-pine-800 font-bold">14 px</span>
             </div>
-            <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-champagne-300 cursor-pointer">
+            <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-pine-800 cursor-pointer">
           </div>
         </div>
 
         <!-- 装备属性表单 -->
-        <div class="card-dark p-4 space-y-3">
+        <div class="card-modern p-4 space-y-3">
           <div>
-            <label class="block text-xs font-medium text-sand-500 mb-1">装备名称 *</label>
+            <label class="block text-xs font-bold text-stone-700 mb-1">装备名称 *</label>
             <input type="text" id="maker-name" placeholder="如：胡巴 双人帐篷" 
-              class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+              class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-sand-500 mb-1">分类 *</label>
-              <select id="maker-category" class="w-full px-3 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+              <label class="block text-xs font-bold text-stone-700 mb-1">分类 *</label>
+              <select id="maker-category" class="w-full px-3 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
                 <!-- 动态填充 -->
               </select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-sand-500 mb-1">重量 (克 g) *</label>
+              <label class="block text-xs font-bold text-stone-700 mb-1">重量 (克 g) *</label>
               <input type="number" id="maker-weight" placeholder="1350" 
-                class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+                class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-sand-500 mb-1">品牌</label>
+              <label class="block text-xs font-bold text-stone-700 mb-1">品牌</label>
               <input type="text" id="maker-brand" placeholder="MSR" 
-                class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+                class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
             </div>
             <div>
-              <label class="block text-xs font-medium text-sand-500 mb-1">型号</label>
+              <label class="block text-xs font-bold text-stone-700 mb-1">型号</label>
               <input type="text" id="maker-model" placeholder="NX 2P" 
-                class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+                class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-sand-500 mb-1">备注说明</label>
-            <input type="text" id="maker-desc" placeholder="自立式双门，购于2024" 
-              class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 text-champagne-200 border border-white/5 rounded-xl focus:outline-none focus:border-champagne-400">
+            <label class="block text-xs font-bold text-stone-700 mb-1">备注说明</label>
+            <input type="text" id="maker-desc" placeholder="自立式双门，硅胶涂层" 
+              class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 text-stone-900 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
           </div>
         </div>
 
         <button id="save-gear-btn" onclick="saveGearFromMaker()" 
-          class="w-full py-3.5 bg-champagne-200 hover:bg-white text-obsidian-950 font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2">
+          class="w-full py-3.5 bg-pine-800 hover:bg-pine-900 text-white font-bold rounded-2xl shadow-md transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-cloud-arrow-up"></i> 保存并上传到 Cloudflare
         </button>
       </section>
@@ -348,37 +398,37 @@
       <!-- ================= 页面 4：行程详情 ================= -->
       <section id="view-trip-detail" class="space-y-3.5 hidden">
         <div class="flex items-center justify-between pb-1">
-          <button onclick="switchTab('trips')" class="text-xs text-champagne-300 font-bold flex items-center gap-1.5 hover:underline">
+          <button onclick="switchTab('trips')" class="text-xs text-pine-800 font-bold flex items-center gap-1.5 hover:underline">
             <i class="fa-solid fa-chevron-left text-[10px]"></i> 返回行程列表
           </button>
-          <span class="text-[10px] bg-champagne-200/10 text-champagne-200 font-bold px-2.5 py-0.5 rounded-full" id="detail-trip-status">筹备中</span>
+          <span class="text-[10px] bg-pine-800/10 text-pine-800 font-bold px-2.5 py-0.5 rounded-full" id="detail-trip-status">筹备中</span>
         </div>
 
-        <div class="card-dark p-5 space-y-3">
+        <div class="card-modern p-5 space-y-3">
           <div>
-            <h2 class="text-xl font-black text-champagne-200 tracking-tight" id="detail-trip-title">行程标题</h2>
-            <p class="text-xs text-sand-500 mt-1" id="detail-trip-desc">行程描述</p>
+            <h2 class="text-xl font-black text-stone-900 tracking-tight" id="detail-trip-title">行程标题</h2>
+            <p class="text-xs text-stone-500 mt-1" id="detail-trip-desc">行程描述</p>
           </div>
 
-          <div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/5 text-center">
+          <div class="grid grid-cols-3 gap-2 pt-3 border-t border-chalk-200 text-center">
             <div>
-              <p class="text-[10px] text-sand-500">已打包</p>
-              <p class="text-lg font-bold text-champagne-200 num-display" id="detail-packed-count">0/0 件</p>
+              <p class="text-[10px] text-stone-500">已打包</p>
+              <p class="text-lg font-bold text-stone-900 num-display" id="detail-packed-count">0/0 件</p>
             </div>
             <div>
-              <p class="text-[10px] text-sand-500">基础重量</p>
-              <p class="text-lg font-bold text-champagne-300 num-display" id="detail-base-weight">0.0 kg</p>
+              <p class="text-[10px] text-stone-500">基础重量</p>
+              <p class="text-lg font-bold text-pine-800 num-display" id="detail-base-weight">0.0 kg</p>
             </div>
             <div>
-              <p class="text-[10px] text-sand-500">总重量</p>
-              <p class="text-lg font-bold text-champagne-200 num-display" id="detail-total-weight">0.0 kg</p>
+              <p class="text-[10px] text-stone-500">总重量</p>
+              <p class="text-lg font-bold text-stone-900 num-display" id="detail-total-weight">0.0 kg</p>
             </div>
           </div>
         </div>
 
         <div class="flex justify-between items-center px-1 pt-1">
-          <h3 class="text-xs font-bold text-sand-400">打包检查清单</h3>
-          <button onclick="openAddGearToTripModal()" class="text-xs text-champagne-300 font-bold hover:underline flex items-center gap-1">
+          <h3 class="text-xs font-bold text-stone-800">打包检查清单</h3>
+          <button onclick="openAddGearToTripModal()" class="text-xs text-pine-800 font-bold hover:underline flex items-center gap-1">
             <i class="fa-solid fa-plus text-[10px]"></i> 从装备柜挑选
           </button>
         </div>
@@ -389,19 +439,19 @@
       </section>
     </main>
 
-    <!-- 底部悬浮毛玻璃胶囊导航栏 (直接复刻参考图底部的悬浮药丸 Dock) -->
+    <!-- 底部悬浮毛玻璃胶囊底栏 (清新山系质感) -->
     <div class="absolute bottom-5 inset-x-0 flex justify-center z-40 pointer-events-none">
-      <nav class="frosted-dock px-3 py-2 flex items-center space-x-2 shadow-2xl pointer-events-auto">
+      <nav class="frosted-dock-light px-3.5 py-2 flex items-center space-x-2.5 pointer-events-auto">
         <!-- 装备柜 -->
-        <button onclick="switchTab('closet')" id="dock-closet" class="w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition" title="装备柜">
-          <i class="fa-solid fa-mug-saucer text-base"></i>
+        <button onclick="switchTab('closet')" id="dock-closet" class="w-12 h-10 rounded-2xl flex items-center justify-center text-white bg-pine-800 transition shadow-sm" title="装备柜">
+          <i class="fa-solid fa-boxes-stacked text-base"></i>
         </button>
         <!-- 行程清单 / 统计 -->
-        <button onclick="switchTab('trips')" id="dock-trips" class="w-12 h-10 rounded-2xl flex items-center justify-center text-sand-500 hover:text-champagne-200 transition" title="行程清单">
-          <i class="fa-solid fa-chart-simple text-base"></i>
+        <button onclick="switchTab('trips')" id="dock-trips" class="w-12 h-10 rounded-2xl flex items-center justify-center text-stone-500 hover:text-stone-900 transition" title="行程清单">
+          <i class="fa-solid fa-list-check text-base"></i>
         </button>
         <!-- 贴纸制作 -->
-        <button onclick="openMakerWithPreset()" id="dock-maker" class="w-12 h-10 rounded-2xl flex items-center justify-center text-sand-500 hover:text-champagne-200 transition" title="制作贴纸">
+        <button onclick="openMakerWithPreset()" id="dock-maker" class="w-12 h-10 rounded-2xl flex items-center justify-center text-stone-500 hover:text-stone-900 transition" title="制作贴纸">
           <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
         </button>
       </nav>
@@ -410,40 +460,40 @@
   </div>
 
   <!-- 创建行程模态弹窗 -->
-  <div id="modal-create-trip" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="card-dark w-full max-w-sm p-6 space-y-4 shadow-2xl border border-white/10">
+  <div id="modal-create-trip" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="card-modern w-full max-w-sm p-6 space-y-4 shadow-2xl">
       <div class="flex justify-between items-center">
-        <h3 class="font-bold text-champagne-200 text-base">⛺️ 创建新行程</h3>
-        <button onclick="closeModal('modal-create-trip')" class="text-sand-500 hover:text-champagne-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <h3 class="font-bold text-stone-900 text-base">⛺️ 创建新徒步行程</h3>
+        <button onclick="closeModal('modal-create-trip')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
       <div>
-        <label class="block text-xs font-medium text-sand-500 mb-1">行程标题 *</label>
-        <input type="text" id="trip-modal-title" placeholder="如：雨崩神瀑两日徒步" class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 border border-white/10 rounded-xl text-champagne-200">
+        <label class="block text-xs font-bold text-stone-700 mb-1">行程标题 *</label>
+        <input type="text" id="trip-modal-title" placeholder="如：雨崩神瀑两日徒步" class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 border border-stone-300 rounded-xl text-stone-900">
       </div>
       <div>
-        <label class="block text-xs font-medium text-sand-500 mb-1">描述与路线说明</label>
-        <textarea id="trip-modal-desc" placeholder="营地、天气与装备重点" rows="2" class="w-full px-3.5 py-2.5 text-sm bg-obsidian-900 border border-white/10 rounded-xl text-champagne-200"></textarea>
+        <label class="block text-xs font-bold text-stone-700 mb-1">描述与路线说明</label>
+        <textarea id="trip-modal-desc" placeholder="营地、天气与装备重点" rows="2" class="w-full px-3.5 py-2.5 text-sm bg-chalk-50 border border-stone-300 rounded-xl text-stone-900"></textarea>
       </div>
       <div class="flex space-x-2 pt-2">
-        <button onclick="closeModal('modal-create-trip')" class="flex-1 py-2.5 text-sm text-sand-400 bg-obsidian-800 rounded-xl font-medium">取消</button>
-        <button onclick="submitCreateTrip()" class="flex-1 py-2.5 text-sm text-obsidian-950 bg-champagne-200 hover:bg-white rounded-xl font-bold">创建行程</button>
+        <button onclick="closeModal('modal-create-trip')" class="flex-1 py-2.5 text-sm text-stone-600 bg-chalk-200 rounded-xl font-bold">取消</button>
+        <button onclick="submitCreateTrip()" class="flex-1 py-2.5 text-sm text-white bg-pine-800 hover:bg-pine-900 rounded-xl font-bold shadow-sm">创建行程</button>
       </div>
     </div>
   </div>
 
   <!-- 从装备柜添加物品到行程弹窗 -->
-  <div id="modal-add-gear" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="card-dark w-full max-w-sm max-h-[80vh] flex flex-col p-6 shadow-2xl border border-white/10">
-      <div class="flex justify-between items-center pb-3 border-b border-white/5">
-        <h3 class="font-bold text-champagne-200 text-base">挑选装备加入清单</h3>
-        <button onclick="closeModal('modal-add-gear')" class="text-sand-500 hover:text-champagne-200"><i class="fa-solid fa-xmark"></i></button>
+  <div id="modal-add-gear" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="card-modern w-full max-w-sm max-h-[80vh] flex flex-col p-6 shadow-2xl">
+      <div class="flex justify-between items-center pb-3 border-b border-chalk-200">
+        <h3 class="font-bold text-stone-900 text-base">挑选装备加入清单</h3>
+        <button onclick="closeModal('modal-add-gear')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="flex-1 overflow-y-auto py-3 space-y-2 no-scrollbar" id="available-gears-list">
         <!-- 动态复选框 -->
       </div>
-      <div class="pt-3 border-t border-white/5 flex space-x-2">
-        <button onclick="closeModal('modal-add-gear')" class="flex-1 py-2.5 text-sm text-sand-400 bg-obsidian-800 rounded-xl font-medium">取消</button>
-        <button onclick="submitAddGearsToTrip()" class="flex-1 py-2.5 text-sm text-obsidian-950 bg-champagne-200 hover:bg-white rounded-xl font-bold">确认添加</button>
+      <div class="pt-3 border-t border-chalk-200 flex space-x-2">
+        <button onclick="closeModal('modal-add-gear')" class="flex-1 py-2.5 text-sm text-stone-600 bg-chalk-200 rounded-xl font-bold">取消</button>
+        <button onclick="submitAddGearsToTrip()" class="flex-1 py-2.5 text-sm text-white bg-pine-800 hover:bg-pine-900 rounded-xl font-bold shadow-sm">确认添加</button>
       </div>
     </div>
   </div>

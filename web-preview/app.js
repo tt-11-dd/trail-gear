@@ -1,4 +1,4 @@
-// Trail Gear — 现代高级黑金设计交互引擎
+// Trail Gear — 现代山系浅色装备美学交互引擎
 const API_BASE = 'https://trail-gear-api.liuziting.workers.dev/api/v1';
 
 let state = {
@@ -13,6 +13,7 @@ let state = {
   currentTripDetail: null,
   activeTab: 'closet',
   currentImageSource: null,
+  rawFileSize: 0,
 };
 
 // 模拟时钟
@@ -121,17 +122,21 @@ async function loadGears() {
   document.getElementById('stat-total-weight').textContent = totalKg;
   document.getElementById('stat-base-weight').textContent = baseKg;
 
-  // 背负级别评估
+  // 背负级别评估 (UL / 3S / HV)
   const ulLevelEl = document.getElementById('stat-ul-level');
+  const ulDescEl = document.getElementById('stat-ul-desc');
   if (baseWeightGrams < 4500) {
     ulLevelEl.textContent = 'UL';
+    ulDescEl.textContent = '轻量徒步';
   } else if (baseWeightGrams < 9000) {
-    ulLevelEl.textContent = '轻量';
+    ulLevelEl.textContent = '3S';
+    ulDescEl.textContent = '三季通用';
   } else {
-    ulLevelEl.textContent = '重装';
+    ulLevelEl.textContent = 'HV';
+    ulDescEl.textContent = '重装穿越';
   }
 
-  document.getElementById('sticker-stage-count').textContent = `${totalCount} 件装备`;
+  document.getElementById('sticker-stage-count').textContent = `${totalCount} 件好物`;
 
   renderStickerStage();
   renderGearsGrid();
@@ -149,14 +154,14 @@ async function loadTripDetail(tripId) {
   switchTab('trip-detail');
 }
 
-// ======================== 界面渲染 (黑金高级质感) ========================
+// ======================== 界面渲染 (山系现代纯净) ========================
 
 // 顶部 Segmented Control
 function renderCategorySegmented() {
   const container = document.getElementById('category-segmented');
   let html = `
     <button onclick="selectCategory('')" 
-      class="seg-btn px-3.5 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedCategoryId === '' ? 'bg-champagne-200 text-obsidian-950 shadow-sm' : 'bg-obsidian-800 text-sand-500 hover:text-champagne-200'}">
+      class="seg-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${state.selectedCategoryId === '' ? 'bg-pine-800 text-white shadow-sm' : 'bg-white text-stone-700 border border-stone-200/80 hover:bg-chalk-100'}">
       全部
     </button>
   `;
@@ -166,7 +171,7 @@ function renderCategorySegmented() {
     const shortName = c.name.split(' ')[0];
     html += `
       <button onclick="selectCategory('${c.id}')" 
-        class="seg-btn px-3.5 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${isAct ? 'bg-champagne-200 text-obsidian-950 shadow-sm' : 'bg-obsidian-800 text-sand-500 hover:text-champagne-200'}">
+        class="seg-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap ${isAct ? 'bg-pine-800 text-white shadow-sm' : 'bg-white text-stone-700 border border-stone-200/80 hover:bg-chalk-100'}">
         ${shortName}
       </button>
     `;
@@ -188,34 +193,33 @@ function renderCategorySelect() {
   }
 }
 
-// 核心高光：贴纸展台聚落 (Sticker Stage，复刻参考图)
+// 核心高光：山野营地装备垫贴纸陈列 (Camp Mat Stage)
 function renderStickerStage() {
   const stage = document.getElementById('sticker-stage');
   if (state.gears.length === 0) {
     stage.innerHTML = `
-      <div class="text-center text-sand-500">
-        <i class="fa-solid fa-layer-group text-3xl mb-1 opacity-40"></i>
-        <p class="text-[11px]">暂无贴纸，点击下方制作您的第一件贴纸装备</p>
+      <div class="text-center text-stone-500">
+        <i class="fa-solid fa-mountain-sun text-3xl mb-1.5 opacity-40 text-stone-600"></i>
+        <p class="text-xs font-medium">陈列垫暂无贴纸，点击制作您的第一件贴纸装备</p>
       </div>
     `;
     return;
   }
 
-  // 计算有机贴纸集群
+  // 取装备贴纸在营地垫上自然散落
   const stickersWithImg = state.gears.filter(g => g.sticker_image_url);
   const displayItems = stickersWithImg.length > 0 ? stickersWithImg : state.gears;
 
   stage.innerHTML = `
     <div class="relative w-full h-full flex items-center justify-center">
       ${displayItems.slice(0, 10).map((g, idx) => {
-        // 伪随机散落在聚落舞台
         const count = Math.min(displayItems.length, 10);
         const step = (idx / count) * Math.PI * 2;
-        const radiusX = 90 + ((idx * 17) % 35);
-        const radiusY = 30 + ((idx * 13) % 25);
+        const radiusX = 85 + ((idx * 19) % 40);
+        const radiusY = 28 + ((idx * 11) % 28);
         const posX = Math.cos(step) * radiusX;
         const posY = Math.sin(step) * radiusY;
-        const angle = ((idx * 29) % 26) - 13;
+        const angle = ((idx * 31) % 28) - 14;
         const zIndex = 10 + idx;
 
         return `
@@ -226,7 +230,7 @@ function renderStickerStage() {
             
             ${g.sticker_image_url 
               ? `<img src="${g.sticker_image_url}" class="w-16 h-16 object-contain filter drop-shadow-md" alt="${g.name}">`
-              : `<div class="w-14 h-14 bg-obsidian-800 border-2 border-white rounded-2xl flex items-center justify-center text-champagne-300 shadow-lg font-bold text-xs">
+              : `<div class="w-14 h-14 bg-white border-2 border-pine-800 rounded-2xl flex items-center justify-center text-pine-900 shadow-md font-bold text-xs">
                   ${g.name.slice(0, 2)}
                  </div>`
             }
@@ -242,7 +246,7 @@ function renderGearsGrid() {
   const container = document.getElementById('gears-grid');
   if (state.gears.length === 0) {
     container.innerHTML = `
-      <div class="col-span-2 py-10 text-center text-sand-500">
+      <div class="col-span-2 py-10 text-center text-stone-400">
         <i class="fa-solid fa-box-open text-3xl mb-1.5 opacity-40"></i>
         <p class="text-xs">暂无装备</p>
       </div>
@@ -251,32 +255,32 @@ function renderGearsGrid() {
   }
 
   container.innerHTML = state.gears.map((g, index) => {
-    const angle = ((index * 37) % 30 - 15) / 10;
+    const angle = ((index * 37) % 24 - 12) / 10;
     const weightStr = g.weight_grams >= 1000 
       ? `${(g.weight_grams / 1000).toFixed(2)} kg` 
       : `${g.weight_grams} g`;
 
     return `
-      <div class="card-dark p-3.5 flex flex-col justify-between cursor-pointer hover:border-white/10 transition group"
+      <div class="card-modern p-3.5 flex flex-col justify-between cursor-pointer hover:border-pine-800/40 transition group"
         onclick="confirmDeleteGear('${g.id}', '${g.name.replace(/'/g, "\\'")}')">
         
-        <!-- 贴纸居中暗调展示 -->
-        <div class="h-28 bg-obsidian-900/80 rounded-2xl flex items-center justify-center p-2 overflow-hidden relative border border-white/5">
+        <!-- 贴纸居中展示区 -->
+        <div class="h-28 bg-chalk-100/90 rounded-2xl flex items-center justify-center p-2 overflow-hidden relative border border-chalk-200/60">
           ${g.sticker_image_url 
-            ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow-lg transition transform group-hover:scale-105" style="transform: rotate(${angle}deg);" alt="${g.name}">`
-            : `<i class="fa-solid fa-tent text-3xl text-champagne-400"></i>`
+            ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow-sm transition transform group-hover:scale-105" style="transform: rotate(${angle}deg);" alt="${g.name}">`
+            : `<i class="fa-solid fa-tent text-3xl text-pine-800"></i>`
           }
         </div>
 
         <div class="mt-2.5">
-          ${g.brand ? `<p class="text-[10px] font-bold text-sand-500 tracking-wider truncate uppercase">${g.brand}</p>` : ''}
-          <h4 class="text-xs font-bold text-champagne-200 truncate mt-0.5">${g.name}</h4>
+          ${g.brand ? `<p class="text-[10px] font-bold text-terracotta-500 tracking-wider truncate uppercase">${g.brand}</p>` : ''}
+          <h4 class="text-xs font-bold text-stone-900 truncate mt-0.5">${g.name}</h4>
           
-          <div class="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-            <span class="text-[11px] font-bold text-champagne-300 num-display">
+          <div class="flex justify-between items-center mt-2 pt-2 border-t border-chalk-200">
+            <span class="text-[11px] font-bold text-pine-800 num-display bg-pine-800/5 px-2 py-0.5 rounded-md">
               ${weightStr}
             </span>
-            <span class="text-[9px] text-sand-600 truncate max-w-[65px]">
+            <span class="text-[9px] text-stone-500 truncate max-w-[65px]">
               ${g.category_name ? g.category_name.split(' ')[0] : ''}
             </span>
           </div>
@@ -291,8 +295,8 @@ function renderTripsList() {
   const container = document.getElementById('trips-list');
   if (state.trips.length === 0) {
     container.innerHTML = `
-      <div class="py-12 text-center text-sand-500">
-        <i class="fa-solid fa-mountain text-4xl mb-2 opacity-30"></i>
+      <div class="card-modern py-12 text-center text-stone-400">
+        <i class="fa-solid fa-mountain text-4xl mb-2 opacity-30 text-stone-500"></i>
         <p class="text-xs">暂无行程安排，点击右上角新建</p>
       </div>
     `;
@@ -305,24 +309,24 @@ function renderTripsList() {
     const baseKg = (s.base_weight_grams / 1000).toFixed(1);
 
     return `
-      <div onclick="loadTripDetail('${t.id}')" class="card-dark p-5 cursor-pointer hover:border-white/10 transition space-y-3">
+      <div onclick="loadTripDetail('${t.id}')" class="card-modern p-5 cursor-pointer hover:border-pine-800/40 transition space-y-3">
         <div class="flex justify-between items-start">
           <div>
-            <h4 class="text-base font-bold text-champagne-200">${t.title}</h4>
-            ${t.description ? `<p class="text-xs text-sand-500 mt-1 line-clamp-1">${t.description}</p>` : ''}
+            <h4 class="text-base font-bold text-stone-900">${t.title}</h4>
+            ${t.description ? `<p class="text-xs text-stone-500 mt-1 line-clamp-1">${t.description}</p>` : ''}
           </div>
-          <span class="text-[10px] bg-champagne-200/10 text-champagne-200 font-bold px-2.5 py-1 rounded-full border border-champagne-200/20">
-            ${progress === 100 && s.total_items > 0 ? '已就绪 ✅' : '筹备中'}
+          <span class="text-[10px] bg-pine-800/10 text-pine-800 font-bold px-2.5 py-1 rounded-full border border-pine-800/20">
+            ${progress === 100 && s.total_items > 0 ? '已打包齐备 ✅' : '筹备中'}
           </span>
         </div>
 
         <div>
-          <div class="flex justify-between text-xs text-sand-500 font-medium mb-1.5">
+          <div class="flex justify-between text-xs text-stone-600 font-medium mb-1.5">
             <span>打包进度: ${s.packed_items}/${s.total_items} 件</span>
-            <span class="text-champagne-300 font-bold">基础重量: ${baseKg} kg</span>
+            <span class="text-pine-800 font-bold">基础重量: ${baseKg} kg</span>
           </div>
-          <div class="w-full bg-obsidian-900 h-2 rounded-full overflow-hidden border border-white/5">
-            <div class="bg-champagne-200 h-full rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+          <div class="w-full bg-chalk-200 h-2 rounded-full overflow-hidden">
+            <div class="bg-pine-800 h-full rounded-full transition-all duration-300" style="width: ${progress}%"></div>
           </div>
         </div>
       </div>
@@ -348,27 +352,27 @@ function renderTripDetail() {
 
   if (items.length === 0) {
     container.innerHTML = `
-      <div class="card-dark py-12 text-center text-sand-500 border-dashed">
+      <div class="card-modern py-12 text-center text-stone-400 border-dashed">
         <i class="fa-solid fa-list-check text-3xl mb-2 opacity-30"></i>
-        <p class="text-xs">清单空空如也，点击右上角挑选装备</p>
+        <p class="text-xs">清单空空如也，点击右上角挑选装备加入</p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = items.map(item => `
-    <div class="card-dark p-3.5 flex items-center justify-between shadow-sm">
+    <div class="card-modern p-3.5 flex items-center justify-between shadow-sm">
       <div class="flex items-center space-x-3">
         <input type="checkbox" ${item.is_packed ? 'checked' : ''} 
           onchange="toggleItemPacked('${item.trip_item_id}', this.checked)"
-          class="w-4 h-4 text-champagne-400 bg-obsidian-900 border-white/20 rounded focus:ring-0 cursor-pointer">
+          class="w-4 h-4 text-pine-800 rounded border-stone-300 focus:ring-pine-800 cursor-pointer">
         <div>
-          <p class="text-xs font-bold ${item.is_packed ? 'line-through text-sand-600' : 'text-champagne-200'}">${item.gear_name}</p>
-          <p class="text-[10px] text-sand-500">${item.gear_brand || ''} · ${item.weight_grams}g</p>
+          <p class="text-xs font-bold ${item.is_packed ? 'line-through text-stone-400' : 'text-stone-900'}">${item.gear_name}</p>
+          <p class="text-[10px] text-stone-500">${item.gear_brand || ''} · ${item.weight_grams}g</p>
         </div>
       </div>
-      <span class="text-[10px] font-bold ${item.is_packed ? 'text-champagne-300 bg-champagne-300/10' : 'text-amber-500/80 bg-amber-500/10'} px-2.5 py-1 rounded-full">
-        ${item.is_packed ? '已打包 ✅' : '待整理 ⏳'}
+      <span class="text-[10px] font-bold ${item.is_packed ? 'text-pine-800 bg-pine-800/10' : 'text-stone-500 bg-chalk-200'} px-2.5 py-1 rounded-full">
+        ${item.is_packed ? '已就绪 ✅' : '待整理 ⏳'}
       </span>
     </div>
   `).join('');
@@ -411,19 +415,45 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
+  state.rawFileSize = file.size;
+
   const reader = new FileReader();
   reader.onload = (event) => {
-    const img = new Image();
-    img.onload = () => {
-      state.currentImageSource = img;
-      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      const nameInput = document.getElementById('maker-name');
-      if (!nameInput.value || nameInput.value.includes('帐篷')) {
-        nameInput.value = cleanName;
+    const rawImg = new Image();
+    rawImg.onload = () => {
+      // 1. 预压缩下采样：限制最大 1200px 避免内存臃肿
+      const maxDim = 1200;
+      let targetW = rawImg.width;
+      let targetH = rawImg.height;
+      if (targetW > maxDim || targetH > maxDim) {
+        if (targetW > targetH) {
+          targetH = Math.round((targetH * maxDim) / targetW);
+          targetW = maxDim;
+        } else {
+          targetW = Math.round((targetW * maxDim) / targetH);
+          targetH = maxDim;
+        }
       }
-      processSticker(img, parseInt(strokeSlider.value));
+
+      const preCanvas = document.createElement('canvas');
+      preCanvas.width = targetW;
+      preCanvas.height = targetH;
+      const preCtx = preCanvas.getContext('2d');
+      preCtx.drawImage(rawImg, 0, 0, targetW, targetH);
+
+      const downsampledImg = new Image();
+      downsampledImg.onload = () => {
+        state.currentImageSource = downsampledImg;
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        const nameInput = document.getElementById('maker-name');
+        if (!nameInput.value || nameInput.value.includes('帐篷')) {
+          nameInput.value = cleanName;
+        }
+        processSticker(downsampledImg, parseInt(strokeSlider.value));
+      };
+      downsampledImg.src = preCanvas.toDataURL('image/jpeg', 0.9);
     };
-    img.src = event.target.result;
+    rawImg.src = event.target.result;
   };
   reader.readAsDataURL(file);
 });
@@ -646,7 +676,7 @@ function processSticker(imgSource, strokeWidth) {
   canvas.height = renderSource.height + padding * 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. 绘制饱满白色描边 (Sticker Pure White Outline)
+  // 1. 绘制纯白立体描边 (Sticker Pure White Outline)
   const steps = 36;
   ctx.save();
   for (let r = strokeWidth; r >= 1; r -= 2) {
@@ -655,20 +685,118 @@ function processSticker(imgSource, strokeWidth) {
       const ox = padding + Math.cos(angle) * r;
       const oy = padding + Math.sin(angle) * r;
 
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
-      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.98)';
+      ctx.shadowBlur = 3;
       ctx.drawImage(renderSource, ox, oy);
     }
   }
 
-  // 2. 覆盖立体环境阴影 (Drop Shadow)
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetY = 6;
+  // 2. 覆盖柔和真实物理阴影 (Drop Shadow on Light Background)
+  ctx.shadowColor = 'rgba(40, 35, 28, 0.18)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 5;
 
   // 3. 覆盖原始主体在正中央
   ctx.drawImage(renderSource, padding, padding);
   ctx.restore();
+}
+
+// 贴纸紧密包围盒裁剪与极速压缩 (800px 规格化 + WebP 高效无损/透明压缩)
+async function compressAndTrimSticker(sourceCanvas, maxDimension = 800) {
+  const sCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+  const imgData = sCtx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  // 1. 扫描非透明内容包围盒 (Bounding Box)
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  let hasPixels = false;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const alpha = data[(y * w + x) * 4 + 3];
+      if (alpha > 8) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        hasPixels = true;
+      }
+    }
+  }
+
+  // 若为空白画面，回退至原画布
+  if (!hasPixels) {
+    minX = 0; minY = 0; maxX = w; maxY = h;
+  }
+
+  // 添加 6px 安全呼吸边距
+  const pad = 6;
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(w, maxX + pad);
+  maxY = Math.min(h, maxY + pad);
+
+  const cropW = maxX - minX;
+  const cropH = maxY - minY;
+
+  // 2. 缩放到规范尺寸 (最大 maxDimension)
+  let targetW = cropW;
+  let targetH = cropH;
+  if (targetW > maxDimension || targetH > maxDimension) {
+    if (targetW > targetH) {
+      targetH = Math.round((targetH * maxDimension) / targetW);
+      targetW = maxDimension;
+    } else {
+      targetW = Math.round((targetW * maxDimension) / targetH);
+      targetH = maxDimension;
+    }
+  }
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = targetW;
+  outCanvas.height = targetH;
+  const outCtx = outCanvas.getContext('2d');
+  outCtx.imageSmoothingEnabled = true;
+  outCtx.imageSmoothingQuality = 'high';
+
+  outCtx.drawImage(
+    sourceCanvas,
+    minX, minY, cropW, cropH,
+    0, 0, targetW, targetH
+  );
+
+  // 3. 压缩为带透明度的 WebP 或 PNG
+  const blob = await new Promise(resolve => {
+    outCanvas.toBlob(
+      b => {
+        if (b) resolve(b);
+        else outCanvas.toBlob(resolve, 'image/png');
+      },
+      'image/webp',
+      0.88
+    );
+  });
+
+  // 更新前端压缩看板数据
+  const compressedKb = Math.round(blob.size / 1024);
+  const infoText = document.getElementById('compress-info-text');
+  const sizePill = document.getElementById('compress-size-pill');
+
+  if (infoText && sizePill) {
+    if (state.rawFileSize > 0) {
+      const rawMb = (state.rawFileSize / (1024 * 1024)).toFixed(1);
+      const ratio = Math.round((1 - blob.size / state.rawFileSize) * 100);
+      infoText.textContent = `原图 ${rawMb}MB → 贴纸 ${compressedKb}KB (规格 ${targetW}x${targetH}px)`;
+      sizePill.textContent = `体积缩减 ${Math.max(10, ratio)}%`;
+    } else {
+      infoText.textContent = `贴纸已压缩优化: ${compressedKb} KB (${targetW}x${targetH}px)`;
+      sizePill.textContent = '轻量已优化';
+    }
+  }
+
+  return blob;
 }
 
 async function saveGearFromMaker() {
@@ -686,12 +814,13 @@ async function saveGearFromMaker() {
 
   const btn = document.getElementById('save-gear-btn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 上传 Cloudflare R2...`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在压缩并上传 Cloudflare R2...`;
 
   try {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    // 自动裁剪多余空白边并压缩
+    const compressedBlob = await compressAndTrimSticker(canvas, 800);
     const formData = new FormData();
-    formData.append('file', blob, 'sticker.png');
+    formData.append('file', compressedBlob, 'sticker.webp');
     formData.append('type', 'gear_sticker');
 
     const uploadRes = await apiRequest('/storage/upload', {
@@ -760,14 +889,14 @@ function openAddGearToTripModal() {
 
   const listEl = document.getElementById('available-gears-list');
   if (available.length === 0) {
-    listEl.innerHTML = `<p class="text-xs text-sand-500 text-center py-6">装备柜中暂无新装备可添加</p>`;
+    listEl.innerHTML = `<p class="text-xs text-stone-500 text-center py-6">装备柜中暂无新装备可添加</p>`;
   } else {
     listEl.innerHTML = available.map(g => `
-      <label class="flex items-center space-x-3 p-3 rounded-xl hover:bg-obsidian-800 border border-white/5 cursor-pointer">
-        <input type="checkbox" value="${g.id}" class="gear-add-checkbox w-4 h-4 text-champagne-400 bg-obsidian-900 border-white/20 rounded">
+      <label class="flex items-center space-x-3 p-3 rounded-xl hover:bg-chalk-100 border border-stone-200 cursor-pointer">
+        <input type="checkbox" value="${g.id}" class="gear-add-checkbox w-4 h-4 text-pine-800 rounded">
         <div>
-          <p class="text-xs font-bold text-champagne-200">${g.name}</p>
-          <p class="text-[10px] text-sand-500">${g.brand || ''} · ${g.weight_grams}g</p>
+          <p class="text-xs font-bold text-stone-900">${g.name}</p>
+          <p class="text-[10px] text-stone-500">${g.brand || ''} · ${g.weight_grams}g</p>
         </div>
       </label>
     `).join('');
@@ -805,27 +934,24 @@ function switchTab(tab) {
     if (el) el.classList.toggle('hidden', v !== tab);
   });
 
-  // Dock 按钮高亮
+  // Dock 按钮高亮 (浅色山系)
   const dockCloset = document.getElementById('dock-closet');
   const dockTrips = document.getElementById('dock-trips');
   const dockMaker = document.getElementById('dock-maker');
 
   [dockCloset, dockTrips, dockMaker].forEach(b => {
-    b.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-sand-500 hover:text-champagne-200 transition';
+    b.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-stone-500 hover:text-stone-900 transition';
   });
 
   if (tab === 'closet') {
-    dockCloset.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
-    document.getElementById('header-title').textContent = '装备';
-    document.getElementById('header-subtitle').textContent = 'Trail Gear · 贴纸化装备库';
+    dockCloset.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-white bg-pine-800 transition shadow-sm';
+    document.getElementById('header-title').textContent = '装备收纳';
   } else if (tab === 'trips' || tab === 'trip-detail') {
-    dockTrips.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
-    document.getElementById('header-title').textContent = '行程';
-    document.getElementById('header-subtitle').textContent = '打包进度与负重规划';
+    dockTrips.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-white bg-pine-800 transition shadow-sm';
+    document.getElementById('header-title').textContent = '行程清单';
   } else if (tab === 'maker') {
-    dockMaker.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-champagne-200 bg-obsidian-750 transition shadow-inner';
+    dockMaker.className = 'w-12 h-10 rounded-2xl flex items-center justify-center text-white bg-pine-800 transition shadow-sm';
     document.getElementById('header-title').textContent = '贴纸工坊';
-    document.getElementById('header-subtitle').textContent = '暗调舞台 · 智能边缘生成';
   }
 }
 
