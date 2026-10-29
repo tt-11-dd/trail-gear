@@ -315,6 +315,7 @@ const canvas = document.getElementById('sticker-canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const strokeSlider = document.getElementById('stroke-slider');
 const strokeValText = document.getElementById('stroke-val');
+const autoCutoutToggle = document.getElementById('auto-cutout-toggle');
 
 strokeSlider.addEventListener('input', (e) => {
   strokeValText.textContent = `${e.target.value} px`;
@@ -322,6 +323,14 @@ strokeSlider.addEventListener('input', (e) => {
     processSticker(state.currentImageSource, parseInt(e.target.value));
   }
 });
+
+if (autoCutoutToggle) {
+  autoCutoutToggle.addEventListener('change', () => {
+    if (state.currentImageSource) {
+      processSticker(state.currentImageSource, parseInt(strokeSlider.value));
+    }
+  });
+}
 
 document.getElementById('image-file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -332,6 +341,12 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
     const img = new Image();
     img.onload = () => {
       state.currentImageSource = img;
+      // 自动设置文件名作为默认名称
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      const nameInput = document.getElementById('maker-name');
+      if (!nameInput.value || nameInput.value.includes('帐篷')) {
+        nameInput.value = cleanName;
+      }
       processSticker(img, parseInt(strokeSlider.value));
     };
     img.src = event.target.result;
@@ -339,41 +354,203 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
   reader.readAsDataURL(file);
 });
 
-// 生成预设示例贴纸
-function openMakerWithPreset() {
-  switchTab('maker');
-  // 创建一个精美的户外帐篷预设矢量图形作为体验演示
+// 智能背景消除 (智能抠图算子)
+function smartRemoveBackground(img) {
+  const offscreen = document.createElement('canvas');
+  offscreen.width = img.width;
+  offscreen.height = img.height;
+  const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+  offCtx.drawImage(img, 0, 0);
+
+  const imgData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
+  const data = imgData.data;
+  const w = offscreen.width;
+  const h = offscreen.height;
+
+  // 检查是否本身已经带透明通道（若大部分边缘已透明，则直接返回）
+  let transparentBorderCount = 0;
+  for (let x = 0; x < w; x++) {
+    if (data[x * 4 + 3] < 50) transparentBorderCount++;
+    if (data[((h - 1) * w + x) * 4 + 3] < 50) transparentBorderCount++;
+  }
+  if (transparentBorderCount > w * 0.4) {
+    return offscreen; // 已经是透明 PNG，直接使用
+  }
+
+  // 取 4 个顶角的采样背景色
+  const corners = [
+    [0, 0],
+    [w - 1, 0],
+    [0, h - 1],
+    [w - 1, h - 1],
+  ];
+  let bgR = 0, bgG = 0, bgB = 0;
+  for (const [cx, cy] of corners) {
+    const idx = (cy * w + cx) * 4;
+    bgR += data[idx];
+    bgG += data[idx + 1];
+    bgB += data[idx + 2];
+  }
+  bgR = Math.round(bgR / 4);
+  bgG = Math.round(bgG / 4);
+  bgB = Math.round(bgB / 4);
+
+  // 泛洪/边缘扩散抠出背景
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+
+  // 将四边像素中与背景相近的点作为种子注入队列
+  const colorTolerance = 45; // 色差容限
+
+  function isBgColor(idx) {
+    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+    const dist = Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
+    return dist < colorTolerance;
+  }
+
+  for (let x = 0; x < w; x++) {
+    const topIdx = x * 4;
+    if (isBgColor(topIdx)) { queue.push(x, 0); visited[x] = 1; }
+    const botIdx = ((h - 1) * w + x) * 4;
+    if (isBgColor(botIdx)) { queue.push(x, h - 1); visited[(h - 1) * w + x] = 1; }
+  }
+  for (let y = 0; y < h; y++) {
+    const leftIdx = y * w * 4;
+    if (isBgColor(leftIdx) && !visited[y * w]) { queue.push(0, y); visited[y * w] = 1; }
+    const rightIdx = (y * w + w - 1) * 4;
+    if (isBgColor(rightIdx) && !visited[y * w + w - 1]) { queue.push(w - 1, y); visited[y * w + w - 1] = 1; }
+  }
+
+  let head = 0;
+  const dx = [1, -1, 0, 0];
+  const dy = [0, 0, 1, -1];
+
+  while (head < queue.length) {
+    const qx = queue[head++];
+    const qy = queue[head++];
+    const pixIdx = (qy * w + qx) * 4;
+
+    // 清除为透明
+    data[pixIdx + 3] = 0;
+
+    for (let i = 0; i < 4; i++) {
+      const nx = qx + dx[i];
+      const ny = qy + dy[i];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+        const nPos = ny * w + nx;
+        if (!visited[nPos]) {
+          visited[nPos] = 1;
+          const nIdx = nPos * 4;
+          if (isBgColor(nIdx)) {
+            queue.push(nx, ny);
+          }
+        }
+      }
+    }
+  }
+
+  offCtx.putImageData(imgData, 0, 0);
+  return offscreen;
+}
+
+// 预设装备图形库
+function loadGearPreset(type) {
   const sampleCanvas = document.createElement('canvas');
   sampleCanvas.width = 300;
   sampleCanvas.height = 300;
   const sCtx = sampleCanvas.getContext('2d');
 
-  // 绘制帐篷轮廓
-  sCtx.fillStyle = '#10b981';
-  sCtx.beginPath();
-  sCtx.moveTo(150, 40);
-  sCtx.lineTo(260, 240);
-  sCtx.lineTo(40, 240);
-  sCtx.closePath();
-  sCtx.fill();
+  if (type === 'tent') {
+    // 帐篷
+    sCtx.fillStyle = '#10b981';
+    sCtx.beginPath();
+    sCtx.moveTo(150, 40);
+    sCtx.lineTo(260, 240);
+    sCtx.lineTo(40, 240);
+    sCtx.closePath();
+    sCtx.fill();
 
-  // 门帘与内帐细节
-  sCtx.fillStyle = '#047857';
-  sCtx.beginPath();
-  sCtx.moveTo(150, 80);
-  sCtx.lineTo(210, 240);
-  sCtx.lineTo(90, 240);
-  sCtx.closePath();
-  sCtx.fill();
+    sCtx.fillStyle = '#047857';
+    sCtx.beginPath();
+    sCtx.moveTo(150, 80);
+    sCtx.lineTo(210, 240);
+    sCtx.lineTo(90, 240);
+    sCtx.closePath();
+    sCtx.fill();
 
-  // 门帘拉开
-  sCtx.fillStyle = '#fbbf24';
-  sCtx.beginPath();
-  sCtx.moveTo(150, 110);
-  sCtx.lineTo(180, 240);
-  sCtx.lineTo(120, 240);
-  sCtx.closePath();
-  sCtx.fill();
+    sCtx.fillStyle = '#fbbf24';
+    sCtx.beginPath();
+    sCtx.moveTo(150, 110);
+    sCtx.lineTo(180, 240);
+    sCtx.lineTo(120, 240);
+    sCtx.closePath();
+    sCtx.fill();
+
+    document.getElementById('maker-name').value = '云尚2 超轻双人帐篷';
+    document.getElementById('maker-brand').value = 'Naturehike';
+    document.getElementById('maker-model').value = '20D 硅胶款';
+    document.getElementById('maker-weight').value = '1250';
+    document.getElementById('maker-desc').value = '双人自立式帐篷，抗风防雨';
+    document.getElementById('maker-category').value = 'cat_shelter';
+  } else if (type === 'pack') {
+    // 背包
+    sCtx.fillStyle = '#3b82f6';
+    sCtx.roundRect(80, 70, 140, 180, 24);
+    sCtx.fill();
+
+    sCtx.fillStyle = '#1d4ed8';
+    sCtx.roundRect(95, 40, 110, 45, 12);
+    sCtx.fill();
+
+    sCtx.fillStyle = '#f59e0b';
+    sCtx.fillRect(100, 140, 100, 16);
+    sCtx.fillRect(100, 180, 100, 16);
+
+    document.getElementById('maker-name').value = 'Baltoro 65L 重装徒步包';
+    document.getElementById('maker-brand').value = 'Gregory 格里高利';
+    document.getElementById('maker-model').value = 'Pro 65';
+    document.getElementById('maker-weight').value = '2150';
+    document.getElementById('maker-desc').value = '背负支撑极佳，适合多日长线穿越';
+    document.getElementById('maker-category').value = 'cat_pack';
+  } else if (type === 'stove') {
+    // 气炉
+    sCtx.fillStyle = '#ef4444';
+    sCtx.roundRect(100, 160, 100, 70, 16);
+    sCtx.fill();
+
+    sCtx.fillStyle = '#9ca3af';
+    sCtx.fillRect(135, 110, 30, 50);
+
+    sCtx.fillStyle = '#f97316';
+    sCtx.beginPath();
+    sCtx.arc(150, 95, 20, 0, Math.PI * 2);
+    sCtx.fill();
+
+    document.getElementById('maker-name').value = '风暴微型一体气炉';
+    document.getElementById('maker-brand').value = 'SOTO';
+    document.getElementById('maker-model').value = 'WindMaster SOD-310';
+    document.getElementById('maker-weight').value = '67';
+    document.getElementById('maker-desc').value = '强抗风稳压微型气炉';
+    document.getElementById('maker-category').value = 'cat_cook';
+  } else if (type === 'cup') {
+    // 钛杯
+    sCtx.fillStyle = '#94a3b8';
+    sCtx.roundRect(90, 80, 120, 130, 14);
+    sCtx.fill();
+
+    sCtx.strokeStyle = '#64748b';
+    sCtx.lineWidth = 14;
+    sCtx.beginPath();
+    sCtx.arc(210, 145, 32, -Math.PI / 2, Math.PI / 2);
+    sCtx.stroke();
+
+    document.getElementById('maker-name').value = '450ml 单层钛金属露营杯';
+    document.getElementById('maker-brand').value = 'Snow Peak 雪峰';
+    document.getElementById('maker-model').value = 'MG-143';
+    document.getElementById('maker-weight').value = '70';
+    document.getElementById('maker-desc').value = '轻量耐用，折叠手柄';
+    document.getElementById('maker-category').value = 'cat_cook';
+  }
 
   const img = new Image();
   img.onload = () => {
@@ -381,23 +558,30 @@ function openMakerWithPreset() {
     processSticker(img, parseInt(strokeSlider.value));
   };
   img.src = sampleCanvas.toDataURL();
-
-  // 预填表单
-  document.getElementById('maker-name').value = '云尚2 超轻双人帐篷';
-  document.getElementById('maker-brand').value = 'Naturehike';
-  document.getElementById('maker-model').value = '20D 硅胶款';
-  document.getElementById('maker-weight').value = '1250';
-  document.getElementById('maker-desc').value = '双人自立式帐篷，抗风防雨';
 }
 
-// 核心贴纸描边算法：多向膨胀 + 白色圆角描边 + 柔和阴影
-function processSticker(img, strokeWidth) {
+// 打开贴纸制作器
+function openMakerWithPreset() {
+  switchTab('maker');
+  loadGearPreset('tent');
+}
+
+// 核心贴纸描边算法：智能抠图 + 多向形态学膨胀 + 白色圆角描边 + 柔和阴影
+function processSticker(imgSource, strokeWidth) {
   document.getElementById('upload-placeholder').classList.add('hidden');
   canvas.classList.remove('hidden');
+  const badge = document.getElementById('change-photo-badge');
+  if (badge) badge.classList.remove('hidden');
 
-  const padding = strokeWidth + 10;
-  canvas.width = img.width + padding * 2;
-  canvas.height = img.height + padding * 2;
+  // 若开启自动抠图，先进行端侧背景消除
+  let renderSource = imgSource;
+  if (autoCutoutToggle && autoCutoutToggle.checked) {
+    renderSource = smartRemoveBackground(imgSource);
+  }
+
+  const padding = strokeWidth + 12;
+  canvas.width = renderSource.width + padding * 2;
+  canvas.height = renderSource.height + padding * 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // 1. 绘制多层白色偏移生成膨胀描边 (Sticker Stroke)
@@ -409,19 +593,19 @@ function processSticker(img, strokeWidth) {
       const ox = padding + Math.cos(angle) * r;
       const oy = padding + Math.sin(angle) * r;
 
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-      ctx.shadowBlur = 4;
-      ctx.drawImage(img, ox, oy);
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
+      ctx.shadowBlur = 3;
+      ctx.drawImage(renderSource, ox, oy);
     }
   }
 
   // 2. 覆盖柔和环境投影 (Drop Shadow)
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
-  ctx.shadowBlur = 12;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.14)';
+  ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 4;
 
-  // 3. 覆盖原始图片在正中央
-  ctx.drawImage(img, padding, padding);
+  // 3. 覆盖原始主体在正中央
+  ctx.drawImage(renderSource, padding, padding);
   ctx.restore();
 }
 

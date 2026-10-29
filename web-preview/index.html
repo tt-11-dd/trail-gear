@@ -147,25 +147,57 @@
         </div>
 
         <!-- 贴纸画布预览区 -->
-        <div class="w-full h-56 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-inner group">
+        <div class="w-full h-56 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-inner group cursor-pointer" onclick="document.getElementById('image-file-input').click()">
           <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden"></canvas>
-          <div id="upload-placeholder" class="text-center p-6 cursor-pointer" onclick="document.getElementById('image-file-input').click()">
+          
+          <div id="upload-placeholder" class="text-center p-6">
             <div class="w-14 h-14 bg-forest-50 text-forest-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition shadow-sm">
               <i class="fa-solid fa-camera text-2xl"></i>
             </div>
-            <p class="text-sm font-bold text-gray-700">上传装备照片</p>
-            <p class="text-xs text-gray-400 mt-1">支持智能生成圆润白色贴纸边缘</p>
+            <p class="text-sm font-bold text-gray-700">点击此处上传装备照片</p>
+            <p class="text-xs text-gray-400 mt-1">支持从手机/电脑选取任意照片</p>
+          </div>
+
+          <!-- 悬浮更换提示标签 -->
+          <div id="change-photo-badge" class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md opacity-80 group-hover:opacity-100 flex items-center gap-1 hidden">
+            <i class="fa-solid fa-camera"></i> 点击更换
           </div>
           <input type="file" id="image-file-input" accept="image/*" class="hidden">
         </div>
 
-        <!-- 白边描边控制器 -->
-        <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm space-y-2">
-          <div class="flex justify-between items-center text-xs font-bold text-gray-700">
-            <span>贴纸白边厚度</span>
-            <span id="stroke-val" class="text-forest-600">14 px</span>
+        <!-- 快捷操作与预设示例 -->
+        <div class="flex items-center justify-between text-xs pt-1">
+          <button type="button" onclick="document.getElementById('image-file-input').click()" 
+            class="bg-forest-50 hover:bg-forest-100 text-forest-700 font-bold px-3 py-1.5 rounded-lg border border-forest-100 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-upload"></i> 上传我的照片
+          </button>
+          
+          <div class="flex items-center gap-1 text-[11px] text-gray-500">
+            <span>试一试预设:</span>
+            <button type="button" onclick="loadGearPreset('tent')" class="px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 rounded font-medium">⛺️ 帐篷</button>
+            <button type="button" onclick="loadGearPreset('pack')" class="px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 rounded font-medium">🎒 背包</button>
+            <button type="button" onclick="loadGearPreset('stove')" class="px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 rounded font-medium">🫖 气炉</button>
+            <button type="button" onclick="loadGearPreset('cup')" class="px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 rounded font-medium">☕️ 钛杯</button>
           </div>
-          <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-forest-600 cursor-pointer">
+        </div>
+
+        <!-- 贴纸参数控制：自动抠图 + 白边描边 -->
+        <div class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="auto-cutout-toggle" checked class="w-4 h-4 text-forest-600 rounded border-gray-300 focus:ring-forest-600">
+              <span class="text-xs font-bold text-gray-700">自动智能抠图 (去除纯色/背景)</span>
+            </label>
+            <span class="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">端侧边缘分割</span>
+          </div>
+
+          <div class="pt-1 border-t border-gray-100">
+            <div class="flex justify-between items-center text-xs font-bold text-gray-700 mb-1">
+              <span>贴纸白色描边厚度</span>
+              <span id="stroke-val" class="text-forest-600">14 px</span>
+            </div>
+            <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-forest-600 cursor-pointer">
+          </div>
         </div>
 
         <!-- 装备信息表单 -->
