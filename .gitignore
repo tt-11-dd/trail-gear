@@ -1,0 +1,9 @@
+# Node / Bun
+node_modules/
+dist/
+out/
+.wrangler/
+*.log
+.DS_Store
+.env*
+!.env.example

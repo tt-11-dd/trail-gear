@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trail-gear-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "JWT_SECRET": "trail-gear-dev-jwt-secret-key-32bytes-long!!",
+    "PUBLIC_R2_URL": ""
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trail-gear-db",
+      "database_id": "local-d1-id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "trail-gear-assets"
+    }
+  ]
+}
