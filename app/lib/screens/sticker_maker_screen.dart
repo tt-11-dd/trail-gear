@@ -126,83 +126,186 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9FB),
-      appBar: AppBar(
-        title: const Text('✨ 贴纸工坊制作', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 贴纸预览区
-              Container(
-                height: 220,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+      appBar: _generatedStickerFile == null
+          ? null
+          : AppBar(
+              title: const Text('完善装备贴纸', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              backgroundColor: Colors.white,
+              elevation: 0.5,
+            ),
+      body: _generatedStickerFile == null
+          ? Container(
+              color: const Color(0xFF0F0E0C),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // 顶部取景提示
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const Row(
+                            children: [
+                              Icon(Icons.lens, size: 8, color: Colors.redAccent),
+                              SizedBox(width: 6),
+                              Text(
+                                '取景框对准装备主体',
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 48),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-                child: _isProcessingSticker
-                    ? const Center(child: CircularProgressIndicator())
-                    : _generatedStickerFile != null
-                        ? Center(
-                            child: Image.file(_generatedStickerFile!, fit: BoxFit.contain),
-                          )
-                        : Center(
+
+                    // 中间相机取景大画幅
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1D1A),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(color: Colors.white.withOpacity(0.15)),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (_isProcessingSticker)
+                              const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(color: Colors.white),
+                                  SizedBox(height: 12),
+                                  Text('正在生成白色描边贴纸...', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                ],
+                              )
+                            else
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.08),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.camera_alt, size: 36, color: Colors.amber),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  const Text(
+                                    '点击下方快门拍照',
+                                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '自动智能抠图并生成白色描边贴纸',
+                                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 底部快门操作栏
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(36, 16, 36, 32),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // 相册选图
+                          GestureDetector(
+                            onTap: () => _pickImage(ImageSource.gallery),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.add_photo_alternate_outlined, size: 56, color: Colors.grey[400]),
-                                const SizedBox(height: 10),
-                                Text('请拍照或选择一张装备照片', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                                  ),
+                                  child: const Icon(Icons.photo_library, color: Colors.white, size: 22),
+                                ),
+                                const SizedBox(height: 6),
+                                const Text('相册选图', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
-              ),
 
-              const SizedBox(height: 14),
+                          // 核心大快门按钮
+                          GestureDetector(
+                            onTap: () => _pickImage(ImageSource.camera),
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 4),
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
 
-              // 拍照与相册按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('拍照'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          // 占位保对称
+                          const SizedBox(width: 48),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('从相册选'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ],
+                ),
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 贴纸已生成预览区
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('✨ 贴纸已生成', style: TextStyle(fontWeight: FontWeight.black, fontSize: 16)),
+                        TextButton.icon(
+                          onPressed: () => setState(() => _generatedStickerFile = null),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('重拍'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6F2EA),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFFD5D0C3), width: 1.5),
+                      ),
+                      child: Center(
+                        child: Image.file(_generatedStickerFile!, fit: BoxFit.contain),
                       ),
                     ),
-                  ),
-                ],
-              ),
 
-              const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
               // 装备表单信息 (极简 4 字段)
               TextFormField(

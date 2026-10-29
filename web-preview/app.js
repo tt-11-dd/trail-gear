@@ -7,13 +7,16 @@ let state = {
   categories: [],
   gears: [],
   layoutMode: 'scattered', // 'scattered' (随性散落) | 'grid' (一键整理对齐)
-  currentView: 'closet',   // 'closet' | 'maker'
+  currentView: 'closet',   // 'closet' | 'camera' | 'maker'
   currentImageSource: null,
   rawFileSize: 0,
   positions: {},           // gearId -> { x, y, rot, rotStart, zIndex }
   maxZIndex: 20,
   newlyCreatedGearId: null, // 标记刚创建的新贴纸，用于触发独立下落动效
 };
+
+let cameraStream = null;
+let currentFacingMode = 'environment';
 
 // 预设丰富、非单一的角度池 (从 -34° 到 +34°，让每个装备落下时角度各异)
 const ORGANIC_ANGLES = [-28, 19, -15, 32, -8, 25, -34, 14, -22, 29, -12, 18, -26, 23, -18, 31];
@@ -477,22 +480,91 @@ function openGearDetailModal(gearId) {
   modal.classList.remove('hidden');
 }
 
-// ======================== 贴纸制作与极速压缩 ========================
+// ======================== 实时相机取景与拍照贴纸制作 ========================
 
 const canvas = document.getElementById('sticker-canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-const strokeSlider = document.getElementById('stroke-slider');
-const strokeValText = document.getElementById('stroke-val');
 
-if (strokeSlider && strokeValText) {
-  strokeSlider.addEventListener('input', (e) => {
-    strokeValText.textContent = `${e.target.value} px`;
-    if (state.currentImageSource) {
-      processSticker(state.currentImageSource, parseInt(e.target.value));
-    }
-  });
+async function openCameraView() {
+  switchView('camera');
+  await startCamera();
 }
 
+async function startCamera() {
+  const video = document.getElementById('camera-video');
+  const tip = document.getElementById('camera-fallback-tip');
+  if (!video) return;
+
+  stopCamera();
+
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      video.srcObject = cameraStream;
+      await video.play().catch(() => {});
+      if (tip) tip.classList.add('hidden');
+      return;
+    }
+  } catch (err) {
+    console.warn('摄像头获取受限，切换为相册选图模式:', err);
+  }
+  if (tip) tip.classList.remove('hidden');
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('camera-video');
+  if (video) video.srcObject = null;
+}
+
+async function toggleCameraFacing() {
+  currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+  await startCamera();
+}
+
+// 核心快门拍照：从实时视频流捕获或调取相册
+function takePhotoFromCamera() {
+  const video = document.getElementById('camera-video');
+  const flash = document.getElementById('camera-flash');
+
+  // 快门白光闪烁反馈
+  if (flash) {
+    flash.classList.remove('hidden');
+    setTimeout(() => flash.classList.add('hidden'), 120);
+  }
+
+  if (video && video.videoWidth > 0 && cameraStream) {
+    const capCanvas = document.createElement('canvas');
+    capCanvas.width = video.videoWidth;
+    capCanvas.height = video.videoHeight;
+    const capCtx = capCanvas.getContext('2d');
+    capCtx.drawImage(video, 0, 0, capCanvas.width, capCanvas.height);
+
+    const capturedImg = new Image();
+    capturedImg.onload = () => {
+      state.currentImageSource = capturedImg;
+      processSticker(capturedImg, 14);
+      stopCamera();
+      switchView('maker');
+    };
+    capturedImg.src = capCanvas.toDataURL('image/jpeg', 0.92);
+  } else {
+    // 无实时视频流时，调用系统原生相机/相册选择
+    document.getElementById('image-file-input').click();
+  }
+}
+
+// 相册选图监听
 document.getElementById('image-file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -530,8 +602,9 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
         if (!nameInput.value || nameInput.value.includes('帐篷')) {
           nameInput.value = cleanName;
         }
-        const defaultStroke = strokeSlider ? parseInt(strokeSlider.value) : 14;
-        processSticker(downsampledImg, defaultStroke);
+        processSticker(downsampledImg, 14);
+        stopCamera();
+        switchView('maker');
       };
       downsampledImg.src = preCanvas.toDataURL('image/jpeg', 0.9);
     };
@@ -540,116 +613,11 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
   reader.readAsDataURL(file);
 });
 
-// 预设矢量装备
-function loadGearPreset(type) {
-  const sampleCanvas = document.createElement('canvas');
-  sampleCanvas.width = 300;
-  sampleCanvas.height = 300;
-  const sCtx = sampleCanvas.getContext('2d');
-
-  if (type === 'tent') {
-    sCtx.fillStyle = '#22c55e';
-    sCtx.beginPath();
-    sCtx.moveTo(150, 40);
-    sCtx.lineTo(260, 240);
-    sCtx.lineTo(40, 240);
-    sCtx.closePath();
-    sCtx.fill();
-
-    sCtx.fillStyle = '#15803d';
-    sCtx.beginPath();
-    sCtx.moveTo(150, 80);
-    sCtx.lineTo(210, 240);
-    sCtx.lineTo(90, 240);
-    sCtx.closePath();
-    sCtx.fill();
-
-    sCtx.fillStyle = '#fde047';
-    sCtx.beginPath();
-    sCtx.moveTo(150, 110);
-    sCtx.lineTo(180, 240);
-    sCtx.lineTo(120, 240);
-    sCtx.closePath();
-    sCtx.fill();
-
-    document.getElementById('maker-name').value = '云尚2 超轻双人帐篷';
-    document.getElementById('maker-brand').value = 'Naturehike';
-    document.getElementById('maker-weight').value = '1250';
-    const desc = document.getElementById('maker-desc');
-    if (desc) desc.value = '20D硅胶款，超轻自立防大雨';
-  } else if (type === 'pack') {
-    sCtx.fillStyle = '#38bdf8';
-    sCtx.roundRect(80, 70, 140, 180, 24);
-    sCtx.fill();
-
-    sCtx.fillStyle = '#0284c7';
-    sCtx.roundRect(95, 40, 110, 45, 12);
-    sCtx.fill();
-
-    sCtx.fillStyle = '#f59e0b';
-    sCtx.fillRect(100, 140, 100, 16);
-    sCtx.fillRect(100, 180, 100, 16);
-
-    document.getElementById('maker-name').value = 'Baltoro 65L 重装徒步包';
-    document.getElementById('maker-brand').value = 'Gregory 格里高利';
-    document.getElementById('maker-weight').value = '2150';
-    const desc = document.getElementById('maker-desc');
-    if (desc) desc.value = '重装长线徒步背负系统，舒适承重25kg';
-  } else if (type === 'stove') {
-    sCtx.fillStyle = '#f87171';
-    sCtx.roundRect(100, 160, 100, 70, 16);
-    sCtx.fill();
-
-    sCtx.fillStyle = '#cbd5e1';
-    sCtx.fillRect(135, 110, 30, 50);
-
-    sCtx.fillStyle = '#fb923c';
-    sCtx.beginPath();
-    sCtx.arc(150, 95, 20, 0, Math.PI * 2);
-    sCtx.fill();
-
-    document.getElementById('maker-name').value = '风暴微型一体气炉';
-    document.getElementById('maker-brand').value = 'SOTO';
-    document.getElementById('maker-weight').value = '67';
-    const desc = document.getElementById('maker-desc');
-    if (desc) desc.value = '稳压直连气罐，高海拔低温防风';
-  } else if (type === 'cup') {
-    sCtx.fillStyle = '#94a3b8';
-    sCtx.roundRect(90, 80, 120, 130, 14);
-    sCtx.fill();
-
-    sCtx.strokeStyle = '#64748b';
-    sCtx.lineWidth = 14;
-    sCtx.beginPath();
-    sCtx.arc(210, 145, 32, -Math.PI / 2, Math.PI / 2);
-    sCtx.stroke();
-
-    document.getElementById('maker-name').value = '450ml 单层钛金属露营杯';
-    document.getElementById('maker-brand').value = 'Snow Peak';
-    document.getElementById('maker-weight').value = '70';
-    const desc = document.getElementById('maker-desc');
-    if (desc) desc.value = '超轻耐腐蚀，直火烧水，把手可折叠';
-  }
-
-  const img = new Image();
-  img.onload = () => {
-    state.currentImageSource = img;
-    processSticker(img, 14);
-  };
-  img.src = sampleCanvas.toDataURL();
-}
-
-function openMakerWithPreset() {
-  switchView('maker');
-  loadGearPreset('tent');
-}
-
 // 核心贴纸描边算法
 function processSticker(renderSource, strokeWidth) {
-  document.getElementById('upload-placeholder').classList.add('hidden');
+  const placeholder = document.getElementById('upload-placeholder');
+  if (placeholder) placeholder.classList.add('hidden');
   canvas.classList.remove('hidden');
-  const badge = document.getElementById('change-photo-badge');
-  if (badge) badge.classList.remove('hidden');
 
   const padding = strokeWidth + 12;
   canvas.width = renderSource.width + padding * 2;
@@ -875,22 +843,32 @@ function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 
-// 视图切换：'closet' (贴纸墙) <-> 'maker' (做贴纸)
+// 视图切换：'closet' (首页贴纸垫) <-> 'camera' (实时拍照) <-> 'maker' (填写表单)
 function switchView(view) {
   state.currentView = view;
   const viewCloset = document.getElementById('view-closet');
+  const viewCamera = document.getElementById('view-camera');
   const viewMaker = document.getElementById('view-maker');
   const homeActionBar = document.getElementById('home-action-bar');
   const mainContent = document.getElementById('main-content');
 
   if (view === 'closet') {
-    viewCloset.classList.remove('hidden');
-    viewMaker.classList.add('hidden');
-    homeActionBar.classList.remove('hidden');
-  } else {
-    viewCloset.classList.add('hidden');
-    viewMaker.classList.remove('hidden');
-    homeActionBar.classList.add('hidden');
+    stopCamera();
+    viewCloset?.classList.remove('hidden');
+    viewCamera?.classList.add('hidden');
+    viewMaker?.classList.add('hidden');
+    homeActionBar?.classList.remove('hidden');
+  } else if (view === 'camera') {
+    viewCloset?.classList.add('hidden');
+    viewCamera?.classList.remove('hidden');
+    viewMaker?.classList.add('hidden');
+    homeActionBar?.classList.add('hidden');
+  } else if (view === 'maker') {
+    stopCamera();
+    viewCloset?.classList.add('hidden');
+    viewCamera?.classList.add('hidden');
+    viewMaker?.classList.remove('hidden');
+    homeActionBar?.classList.add('hidden');
   }
 
   if (mainContent) mainContent.scrollTop = 0;
