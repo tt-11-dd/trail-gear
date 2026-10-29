@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trail Gear — 贴纸化装备柜与行程清单</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forest: {
+              50: '#F1F8E9',
+              100: '#DCEDC8',
+              500: '#4CAF50',
+              600: '#2E7D32',
+              700: '#1B5E20',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .phone-container {
+      width: 100%;
+      max-width: 420px;
+      height: 860px;
+      max-height: 94vh;
+      border-radius: 44px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 12px #1e293b, 0 0 0 14px #334155;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #F9F9FB;
+    }
+    .sticker-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.06));
+    }
+    .sticker-card:hover {
+      transform: scale(1.02) rotate(0deg) !important;
+      filter: drop-shadow(0 10px 15px rgba(0,0,0,0.12));
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+  <!-- 模拟手机外壳 -->
+  <div class="phone-container">
+    <!-- 顶部状态栏与灵动岛 -->
+    <div class="bg-white pt-3 px-6 pb-2 flex justify-between items-center z-20 select-none">
+      <span class="text-xs font-bold text-gray-800" id="clock-display">09:41</span>
+      <div class="w-24 h-4 bg-black rounded-full mx-auto"></div>
+      <div class="flex items-center space-x-1.5 text-xs text-gray-700">
+        <i class="fa-solid fa-signal text-[10px]"></i>
+        <i class="fa-solid fa-wifi text-[10px]"></i>
+        <i class="fa-solid fa-battery-full text-xs"></i>
+      </div>
+    </div>
+
+    <!-- 顶部导航标题 -->
+    <header class="bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center z-10">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">🎒</span>
+        <h1 class="text-lg font-black text-gray-900 tracking-tight" id="header-title">装备柜 Gear Closet</h1>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span id="user-pill" class="text-xs bg-forest-50 text-forest-700 font-semibold px-2.5 py-1 rounded-full border border-forest-100 flex items-center gap-1">
+          <i class="fa-regular fa-user text-[10px]"></i>
+          <span id="user-name">未登录</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- 主展示区 (可滚动) -->
+    <main class="flex-1 overflow-y-auto no-scrollbar relative" id="main-content">
+      <!-- 页面 1：装备柜 -->
+      <section id="view-closet" class="p-4 space-y-3 block">
+        <!-- 搜索栏 -->
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-sm"></i>
+          <input type="text" id="search-input" placeholder="搜索装备名称、品牌或型号..." 
+            class="w-full pl-10 pr-4 py-2.5 bg-white text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-forest-600 focus:ring-1 focus:ring-forest-600 shadow-sm transition">
+        </div>
+
+        <!-- 分类横滑胶囊 -->
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="category-pills">
+          <button class="cat-pill active px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-forest-600 text-white shadow-sm transition" data-id="">
+            全部
+          </button>
+          <!-- 动态加载分类 -->
+        </div>
+
+        <!-- 汇总栏 -->
+        <div class="flex justify-between items-center px-1 text-xs text-gray-500 font-medium">
+          <span id="gear-count-text">共 0 件装备</span>
+          <span id="gear-weight-badge" class="bg-emerald-100 text-forest-700 font-bold px-2 py-0.5 rounded-md">
+            总重 0.00 kg
+          </span>
+        </div>
+
+        <!-- 装备贴纸卡片网格 -->
+        <div class="grid grid-cols-2 gap-3 pt-1" id="gears-grid">
+          <!-- 动态插入贴纸卡片 -->
+        </div>
+      </section>
+
+      <!-- 页面 2：行程清单 -->
+      <section id="view-trips" class="p-4 space-y-3 hidden">
+        <div class="flex justify-between items-center">
+          <h2 class="text-sm font-bold text-gray-700">我的徒步露营行程</h2>
+          <button onclick="openCreateTripModal()" class="text-xs bg-forest-600 hover:bg-forest-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-plus text-[10px]"></i> 新建行程
+          </button>
+        </div>
+
+        <!-- 行程列表 -->
+        <div class="space-y-3" id="trips-list">
+          <!-- 动态插入行程卡片 -->
+        </div>
+      </section>
+
+      <!-- 页面 3：贴纸工坊制作弹层/界面 -->
+      <section id="view-maker" class="p-4 space-y-4 hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+          <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-forest-600"></i> 制作装备贴纸
+          </h2>
+          <button onclick="switchTab('closet')" class="text-gray-400 hover:text-gray-600 text-sm">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- 贴纸画布预览区 -->
+        <div class="w-full h-56 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-inner group">
+          <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden"></canvas>
+          <div id="upload-placeholder" class="text-center p-6 cursor-pointer" onclick="document.getElementById('image-file-input').click()">
+            <div class="w-14 h-14 bg-forest-50 text-forest-600 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition shadow-sm">
+              <i class="fa-solid fa-camera text-2xl"></i>
+            </div>
+            <p class="text-sm font-bold text-gray-700">上传装备照片</p>
+            <p class="text-xs text-gray-400 mt-1">支持智能生成圆润白色贴纸边缘</p>
+          </div>
+          <input type="file" id="image-file-input" accept="image/*" class="hidden">
+        </div>
+
+        <!-- 白边描边控制器 -->
+        <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-gray-700">
+            <span>贴纸白边厚度</span>
+            <span id="stroke-val" class="text-forest-600">14 px</span>
+          </div>
+          <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-forest-600 cursor-pointer">
+        </div>
+
+        <!-- 装备信息表单 -->
+        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">装备名称 *</label>
+            <input type="text" id="maker-name" placeholder="如：胡巴 双人帐篷 Hubba Hubba" 
+              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">装备分类 *</label>
+              <select id="maker-category" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600 bg-white">
+                <!-- 动态填充 -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">重量 (克 g) *</label>
+              <input type="number" id="maker-weight" placeholder="1350" 
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">品牌</label>
+              <input type="text" id="maker-brand" placeholder="MSR / 挪客" 
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 mb-1">型号</label>
+              <input type="text" id="maker-model" placeholder="NX 2P" 
+                class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">备注说明</label>
+            <input type="text" id="maker-desc" placeholder="自立式双门，购于2024" 
+              class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-forest-600">
+          </div>
+        </div>
+
+        <button id="save-gear-btn" onclick="saveGearFromMaker()" 
+          class="w-full py-3.5 bg-forest-600 hover:bg-forest-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> 保存贴纸到装备柜
+        </button>
+      </section>
+
+      <!-- 页面 4：行程详情与清单 -->
+      <section id="view-trip-detail" class="p-4 space-y-3 hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+          <button onclick="switchTab('trips')" class="text-xs text-forest-700 font-bold flex items-center gap-1">
+            <i class="fa-solid fa-chevron-left text-[10px]"></i> 返回行程列表
+          </button>
+          <span class="text-xs bg-forest-100 text-forest-800 font-bold px-2 py-0.5 rounded" id="detail-trip-status">筹备中</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+          <h2 class="text-lg font-black text-gray-900" id="detail-trip-title">行程标题</h2>
+          <p class="text-xs text-gray-500" id="detail-trip-desc">行程描述</p>
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 text-center">
+            <div>
+              <p class="text-[10px] text-gray-400">已打包</p>
+              <p class="text-sm font-bold text-gray-800" id="detail-packed-count">0/0 件</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400">基础重量</p>
+              <p class="text-sm font-bold text-forest-600" id="detail-base-weight">0.0 kg</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400">总重量</p>
+              <p class="text-sm font-bold text-gray-800" id="detail-total-weight">0.0 kg</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center pt-2">
+          <h3 class="text-xs font-bold text-gray-700">打包检查清单</h3>
+          <button onclick="openAddGearToTripModal()" class="text-xs text-forest-700 font-bold hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-plus text-[10px]"></i> 从装备柜添加
+          </button>
+        </div>
+
+        <div class="space-y-2" id="detail-items-list">
+          <!-- 动态打包明细 -->
+        </div>
+      </section>
+    </main>
+
+    <!-- 底部悬浮制作贴纸快捷按钮 (仅在装备柜显示) -->
+    <button id="fab-maker" onclick="openMakerWithPreset()" 
+      class="absolute bottom-20 right-5 bg-forest-600 hover:bg-forest-700 text-white font-bold px-4 py-3 rounded-full shadow-lg flex items-center gap-2 transition transform hover:scale-105 z-30">
+      <i class="fa-solid fa-camera"></i>
+      <span class="text-xs">拍照做贴纸</span>
+    </button>
+
+    <!-- 底部 Tab 导航栏 -->
+    <nav class="bg-white border-t border-gray-100 px-6 py-2.5 flex justify-around items-center z-20">
+      <button onclick="switchTab('closet')" id="tab-closet" class="flex flex-col items-center text-forest-600 font-bold space-y-1">
+        <i class="fa-solid fa-boxes-stacked text-lg"></i>
+        <span class="text-[10px]">装备柜</span>
+      </button>
+      <button onclick="switchTab('trips')" id="tab-trips" class="flex flex-col items-center text-gray-400 hover:text-gray-600 font-medium space-y-1">
+        <i class="fa-solid fa-list-check text-lg"></i>
+        <span class="text-[10px]">行程清单</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- 创建行程模态弹窗 -->
+  <div id="modal-create-trip" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-gray-900">⛺️ 创建新徒步行程</h3>
+        <button onclick="closeModal('modal-create-trip')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1">行程标题 *</label>
+        <input type="text" id="trip-modal-title" placeholder="如：雨崩神瀑徒步" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1">描述与路线说明</label>
+        <textarea id="trip-modal-desc" placeholder="海拔跨度、天气备忘与装备预案" rows="2" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"></textarea>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button onclick="closeModal('modal-create-trip')" class="flex-1 py-2 text-sm text-gray-600 bg-gray-100 rounded-xl font-medium">取消</button>
+        <button onclick="submitCreateTrip()" class="flex-1 py-2 text-sm text-white bg-forest-600 hover:bg-forest-700 rounded-xl font-bold shadow-md">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 从装备柜添加物品到行程弹窗 -->
+  <div id="modal-add-gear" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm max-h-[80vh] flex flex-col rounded-2xl p-5 shadow-2xl">
+      <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+        <h3 class="font-bold text-gray-900">挑选装备加入行程</h3>
+        <button onclick="closeModal('modal-add-gear')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto py-3 space-y-2" id="available-gears-list">
+        <!-- 动态插入备选物品复选框 -->
+      </div>
+      <div class="pt-3 border-t border-gray-100 flex space-x-2">
+        <button onclick="closeModal('modal-add-gear')" class="flex-1 py-2 text-sm text-gray-600 bg-gray-100 rounded-xl font-medium">取消</button>
+        <button onclick="submitAddGearsToTrip()" class="flex-1 py-2 text-sm text-white bg-forest-600 hover:bg-forest-700 rounded-xl font-bold shadow-md">确认添加</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
