@@ -50,8 +50,8 @@ jobs:
       - name: Build Android Release APK
         working-directory: ./app
         run: |
-          # 打包未签名的 Release APK（开箱即装）
-          flutter build apk --release
+          # 开启详细日志输出，同时自动接受安卓 SDK 协议并使用更兼容的参数
+          flutter build apk --release --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
