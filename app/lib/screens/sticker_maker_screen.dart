@@ -204,32 +204,16 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
 
               const SizedBox(height: 24),
 
-              // 装备表单信息
+              // 装备表单信息 (极简 4 字段)
               TextFormField(
                 decoration: const InputDecoration(
                   labelText: '装备名称 *',
-                  hintText: '如：云尚2 超轻帐篷',
+                  hintText: '如：胡巴 双人帐篷',
                   filled: true,
                   fillColor: Colors.white,
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? '请输入装备名称' : null,
                 onSaved: (v) => _name = v?.trim() ?? '',
-              ),
-
-              const SizedBox(height: 14),
-
-              // 分类选择
-              DropdownButtonFormField<String>(
-                value: _categoryId,
-                decoration: const InputDecoration(
-                  labelText: '装备分类 *',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: widget.categories.map((c) {
-                  return DropdownMenuItem(value: c.id, child: Text(c.name));
-                }).toList(),
-                onChanged: (val) => setState(() => _categoryId = val),
               ),
 
               const SizedBox(height: 14),
@@ -241,11 +225,11 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
                     child: TextFormField(
                       decoration: const InputDecoration(
                         labelText: '重量 (克 g) *',
-                        hintText: '如：1250',
+                        hintText: '如：1350',
                         filled: true,
                         fillColor: Colors.white,
                       ),
-                      keyboardType: const TextInputValue(signed: false, decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (v) => (v == null || double.tryParse(v) == null) ? '请输入有效重量' : null,
                       onSaved: (v) => _weightGrams = double.tryParse(v ?? '0') ?? 0,
                     ),
@@ -254,8 +238,8 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
                   Expanded(
                     child: TextFormField(
                       decoration: const InputDecoration(
-                        labelText: '品牌',
-                        hintText: '如：Naturehike',
+                        labelText: '品牌 (选填)',
+                        hintText: '如：MSR',
                         filled: true,
                         fillColor: Colors.white,
                       ),
@@ -269,20 +253,8 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
 
               TextFormField(
                 decoration: const InputDecoration(
-                  labelText: '型号',
-                  hintText: '如：20D 硅胶款',
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                onSaved: (v) => _model = v?.trim(),
-              ),
-
-              const SizedBox(height: 14),
-
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: '备注描述',
-                  hintText: '补充描述、购入年份或注意事项',
+                  labelText: '备注 (选填)',
+                  hintText: '如：防风抗暴雨、三人四季温带使用',
                   filled: true,
                   fillColor: Colors.white,
                 ),
@@ -295,9 +267,21 @@ class _StickerMakerScreenState extends State<StickerMakerScreen> {
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _saveGear,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
+                  backgroundColor: const Color(0xFF1A382B),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        '✨ 生成贴纸并掉落到首页',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+              ),
                 ),
                 child: _isSubmitting
                     ? const SizedBox(

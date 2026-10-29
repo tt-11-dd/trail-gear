@@ -1,4 +1,4 @@
-// Trail Gear — 现代极简贴纸主页交互引擎
+// Trail Gear — 纯粹贴纸主页交互引擎 (拍照 -> 生成贴纸 -> 展示)
 const API_BASE = 'https://trail-gear-api.liuziting.workers.dev/api/v1';
 
 let state = {
@@ -6,14 +6,36 @@ let state = {
   user: null,
   categories: [],
   gears: [],
-  trips: [],
   layoutMode: 'scattered', // 'scattered' (随性散落) | 'grid' (一键整理对齐)
-  currentTripId: null,
-  currentTripDetail: null,
-  activeTab: 'closet',
+  currentView: 'closet',   // 'closet' | 'maker'
   currentImageSource: null,
   rawFileSize: 0,
+  positions: {},           // gearId -> { x, y, rot, rotStart, zIndex }
+  maxZIndex: 20,
 };
+
+// 预设丰富、非单一的角度池 (从 -34° 到 +34°，让每个装备落下时角度各异)
+const ORGANIC_ANGLES = [-28, 19, -15, 32, -8, 25, -34, 14, -22, 29, -12, 18, -26, 23, -18, 31];
+
+// 存储与读取自定义摆放位置
+function loadSavedPositions() {
+  try {
+    const saved = localStorage.getItem('trailgear_sticker_positions');
+    if (saved) {
+      state.positions = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('读取贴纸位置失败:', e);
+  }
+}
+
+function saveStickerPositions() {
+  try {
+    localStorage.setItem('trailgear_sticker_positions', JSON.stringify(state.positions));
+  } catch (e) {
+    console.warn('存储贴纸位置失败:', e);
+  }
+}
 
 // 模拟时钟
 function updateClock() {
@@ -49,7 +71,7 @@ async function apiRequest(endpoint, options = {}) {
   return json.data;
 }
 
-// 自动快速登录或初始化测试账号
+// 自动快速登录
 async function initAuth() {
   const savedToken = localStorage.getItem('trailgear_token');
   if (savedToken) {
@@ -85,7 +107,7 @@ async function initAuth() {
   }
 }
 
-// ======================== 数据加载与指标计算 ========================
+// ======================== 数据加载 ========================
 
 async function loadCategories() {
   state.categories = await apiRequest('/categories');
@@ -95,152 +117,319 @@ async function loadCategories() {
   }
 }
 
-async function loadGears() {
+async function loadGears(isTriggerDrop = false) {
   const data = await apiRequest('/gears');
   state.gears = data.gears || [];
 
-  // 计算关键指标
   const totalCount = data.total_count || 0;
   const totalKg = ((data.total_weight_grams || 0) / 1000).toFixed(1);
 
-  let baseWeightGrams = 0;
-  state.gears.forEach(g => {
-    if (g.category_id !== 'cat_consumable') {
-      baseWeightGrams += g.weight_grams;
-    }
-  });
-  const baseKg = (baseWeightGrams / 1000).toFixed(1);
-
-  // 顶部极简信息更新
   document.getElementById('stat-count-pill').textContent = `${totalCount} 件`;
-  document.getElementById('stat-weight-text').textContent = `总负重 ${totalKg} kg · 基础 ${baseKg} kg`;
+  document.getElementById('stat-weight-text').textContent = `总负重 ${totalKg} kg`;
 
-  renderStickersCanvas();
-}
-
-async function loadTrips() {
-  state.trips = await apiRequest('/trips');
-  renderTripsList();
-}
-
-async function loadTripDetail(tripId) {
-  state.currentTripId = tripId;
-  state.currentTripDetail = await apiRequest(`/trips/${tripId}`);
-  renderTripDetail();
-  switchTab('trip-detail');
+  renderStickersCanvas(isTriggerDrop);
 }
 
 // ======================== 核心贴纸主页渲染：随机平铺与一键整理 ========================
 
-// 切换布局模式：散落 vs 整理
 function toggleLayoutMode() {
   state.layoutMode = state.layoutMode === 'scattered' ? 'grid' : 'scattered';
   const btnText = document.getElementById('layout-btn-text');
   const icon = document.getElementById('layout-icon');
   const reshuffleBtn = document.getElementById('reshuffle-btn');
+  const modeTag = document.getElementById('closet-mode-tag');
+  const hintText = document.getElementById('closet-hint-text');
 
   if (state.layoutMode === 'grid') {
     btnText.textContent = '随性散落';
     icon.className = 'fa-solid fa-dice text-pine-800';
-    reshuffleBtn.classList.add('hidden');
+    if (reshuffleBtn) reshuffleBtn.classList.add('hidden');
+    if (modeTag) modeTag.textContent = '一键整理';
+    if (hintText) hintText.textContent = '3列整齐陈列 · 点击查看装备';
   } else {
     btnText.textContent = '一键整理';
     icon.className = 'fa-solid fa-grip text-pine-800';
-    reshuffleBtn.classList.remove('hidden');
+    if (reshuffleBtn) reshuffleBtn.classList.remove('hidden');
+    if (modeTag) modeTag.textContent = '随性散落';
+    if (hintText) hintText.textContent = '自由拖动贴纸 · 点击查看装备';
   }
 
-  renderStickersCanvas();
+  renderStickersCanvas(true);
 }
 
-// 重新摇乱散落
+// 重新散落：清除位置缓存，重新以有机丰富多样的角度从上方掉落
 function reshuffleScattered() {
   if (state.layoutMode !== 'scattered') return;
-  // 更新随机种子
-  state.scatterSeed = Math.random();
-  renderStickersCanvas();
+  state.positions = {};
+  saveStickerPositions();
+  renderStickersCanvas(true);
 }
 
-// 渲染贴纸主画布
-function renderStickersCanvas() {
+// 为装备计算或恢复带有自然掉落感的物理坐标与角度 (严格约束在装备收纳垫框内)
+function getOrGenerateStickerPosition(gear, idx, total, forceRefresh = false) {
+  if (!forceRefresh && state.positions[gear.id]) {
+    const existing = state.positions[gear.id];
+    if (existing.x !== undefined && existing.y !== undefined && existing.rot !== undefined) {
+      return existing;
+    }
+  }
+
   const container = document.getElementById('stickers-container');
+  const trayWidth = container?.clientWidth || 340;
+
+  // 严格在装备垫框内两列错落分布
+  const col = idx % 2;
+  const row = Math.floor(idx / 2);
+  
+  const jitterX = Math.round((Math.random() * 18 - 9));
+  const jitterY = Math.round((Math.random() * 20 - 10));
+
+  // 左列 12~30px，右列 168~185px (右边界 185 + 144 = 329px 严密约束在框内)
+  const rawX = col === 0 ? (12 + Math.random() * 16 + jitterX) : (168 + Math.random() * 16 + jitterX);
+  const rawY = row * 155 + 14 + jitterY;
+
+  const posX = Math.max(10, Math.min(Math.max(160, trayWidth - 148), Math.round(rawX)));
+  const posY = Math.max(12, Math.round(rawY));
+
+  // 从丰富角度池中取样，消除单一角度
+  const angleIdx = (idx * 5 + (gear.name.charCodeAt(0) || 7)) % ORGANIC_ANGLES.length;
+  const baseAngle = ORGANIC_ANGLES[angleIdx];
+  const rot = Math.round(baseAngle + (Math.random() * 8 - 4));
+  
+  // 掉落初始翻转角
+  const rotStart = rot + (Math.random() > 0.5 ? 26 : -26);
+
+  const pos = {
+    x: posX,
+    y: posY,
+    rot,
+    rotStart,
+    zIndex: 10 + (idx % 20),
+  };
+
+  state.positions[gear.id] = pos;
+  return pos;
+}
+
+function renderStickersCanvas(isTriggerDrop = false) {
+  const container = document.getElementById('stickers-container');
+  const trayPill = document.getElementById('tray-stat-pill');
+  if (trayPill) {
+    trayPill.textContent = `${state.gears.length} 件贴纸`;
+  }
+
   if (state.gears.length === 0) {
-    container.className = 'relative flex flex-col items-center justify-center py-24 text-stone-400';
+    container.className = 'relative flex flex-col items-center justify-center py-20 text-stone-400';
+    container.style.height = 'auto';
     container.innerHTML = `
-      <i class="fa-solid fa-layer-group text-4xl mb-3 opacity-30 text-stone-500"></i>
-      <p class="text-sm font-bold text-stone-700">桌面空空如也</p>
-      <p class="text-xs text-stone-400 mt-1">点击右下角按钮拍照，生成第一张装备贴纸！</p>
+      <i class="fa-solid fa-rug text-4xl mb-3 opacity-30 text-stone-500"></i>
+      <p class="text-sm font-bold text-stone-700">装备收纳垫还是空的</p>
+      <p class="text-xs text-stone-400 mt-1">点击下方拍照，第一张装备贴纸就会掉落在这里！</p>
     `;
     return;
   }
 
   if (state.layoutMode === 'grid') {
-    // 【整理对齐模式】：整齐的 3 列现代化轻盈陈列网格
-    container.className = 'grid grid-cols-3 gap-3.5 transition-all duration-500';
-    container.innerHTML = state.gears.map((g, idx) => `
-      <div class="sticker-item bg-white/90 p-2.5 rounded-2xl border border-stone-200/80 shadow-sm flex flex-col items-center justify-between transition-all group"
-        onclick="openGearDetailModal('${g.id}')">
-        <div class="w-full h-20 flex items-center justify-center p-1 overflow-hidden">
-          ${g.sticker_image_url 
-            ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow" alt="${g.name}">`
-            : `<div class="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-pine-800 font-bold text-xs">${g.name.slice(0, 2)}</div>`
-          }
+    // 【一键整理模式】：3列现代整齐网格陈列
+    container.className = 'grid grid-cols-3 gap-2.5 transition-all duration-500 py-1';
+    container.style.height = 'auto';
+    container.innerHTML = state.gears.map((g) => {
+      const weightStr = g.weight_grams >= 1000 
+        ? `${(g.weight_grams / 1000).toFixed(1)}kg` 
+        : `${g.weight_grams}g`;
+      return `
+        <div class="grid-view-item bg-white/95 p-2 rounded-2xl border border-stone-200/80 shadow-xs flex flex-col items-center justify-between group"
+          onclick="openGearDetailModal('${g.id}')">
+          <div class="w-full h-20 flex items-center justify-center p-1 overflow-hidden">
+            ${g.sticker_image_url 
+              ? `<img src="${g.sticker_image_url}" class="max-h-full max-w-full object-contain filter drop-shadow-sm select-none" alt="${g.name}">`
+              : `<div class="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-pine-800 font-bold text-xs select-none">${g.name.slice(0, 2)}</div>`
+            }
+          </div>
+          <p class="text-[11px] font-bold text-stone-900 truncate w-full text-center mt-1">${g.name}</p>
+          <span class="text-[9px] font-black text-pine-800 bg-pine-800/10 px-1.5 py-0.5 rounded mt-0.5">
+            ${weightStr}
+          </span>
         </div>
-        <p class="text-[11px] font-bold text-stone-900 truncate w-full text-center mt-1.5">${g.name}</p>
-        <span class="text-[9px] font-extrabold text-pine-800 bg-pine-800/10 px-1.5 py-0.5 rounded mt-0.5">
-          ${g.weight_grams >= 1000 ? (g.weight_grams / 1000).toFixed(1) + 'kg' : g.weight_grams + 'g'}
-        </span>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } else {
-    // 【随性散落平铺模式】：自由流动自然堆叠，犹如真实的户外贴纸手账
-    container.className = 'grid grid-cols-2 gap-y-4 gap-x-2 transition-all duration-500 py-2';
+    // 【随性散落手账桌面模式】：重力掉落弹性质感 + 多角度自然摆放 + 任意拖动
+    container.className = 'scattered-board transition-all duration-300';
     
-    container.innerHTML = state.gears.map((g, idx) => {
-      // 计算每个贴纸自然的手账倾斜与微位移
-      const hash = (g.id.charCodeAt(0) * 17 + idx * 31) % 100;
-      const angle = (hash % 18) - 9; // -9° ~ +9°
-      const shiftX = (hash % 10) - 5;
+    let maxY = 420;
+    const htmlCards = state.gears.map((g, idx) => {
+      const pos = getOrGenerateStickerPosition(g, idx, state.gears.length);
+      if (pos.y > maxY) maxY = pos.y;
+
       const weightStr = g.weight_grams >= 1000 
         ? `${(g.weight_grams / 1000).toFixed(1)} kg` 
         : `${g.weight_grams} g`;
 
+      const dropClass = isTriggerDrop ? 'dropping' : '';
+
       return `
-        <div class="sticker-item relative flex flex-col items-center p-2 group"
-          style="transform: translate(${shiftX}px, 0px) rotate(${angle}deg); z-index: ${10 + (idx % 20)};"
-          onclick="openGearDetailModal('${g.id}')">
+        <div class="sticker-entity ${dropClass}"
+          id="sticker-${g.id}"
+          data-id="${g.id}"
+          style="--pos-x: ${pos.x}px; --pos-y: ${pos.y}px; --rot: ${pos.rot}deg; --rot-start: ${pos.rotStart || (pos.rot + 25)}deg; --delay: ${idx}; transform: translate3d(${pos.x}px, ${pos.y}px, 0) rotate(${pos.rot}deg); z-index: ${pos.zIndex || 10 + idx}; width: 148px;">
           
-          <!-- 贴纸实体 (纯白外边 + 自然立体阴影) -->
-          <div class="relative max-h-32 flex items-center justify-center">
+          <!-- 纯白描边贴纸实体 (悬浮立体手账感) -->
+          <div class="relative flex items-center justify-center pointer-events-none p-1">
             ${g.sticker_image_url 
               ? `<img src="${g.sticker_image_url}" class="max-h-28 max-w-full object-contain filter drop-shadow-md select-none pointer-events-none" alt="${g.name}">`
-              : `<div class="w-20 h-20 bg-white border-2 border-stone-800 rounded-3xl flex items-center justify-center text-stone-900 shadow-md font-bold text-sm">${g.name.slice(0, 3)}</div>`
+              : `<div class="w-20 h-20 bg-white border-2 border-stone-800 rounded-3xl flex items-center justify-center text-stone-900 shadow-md font-bold text-sm pointer-events-none">${g.name.slice(0, 3)}</div>`
             }
           </div>
 
-          <!-- 极轻巧便签说明 -->
-          <div class="mt-1 text-center bg-white/75 backdrop-blur-xs px-2.5 py-0.5 rounded-full border border-stone-300/60 shadow-2xs">
-            <span class="text-[10px] font-bold text-stone-900">${g.name}</span>
-            <span class="text-[9px] text-pine-800 font-extrabold ml-1">${weightStr}</span>
+          <!-- 便签小标签：胶带质感附着于贴纸 -->
+          <div class="mt-1 text-center pointer-events-none select-none">
+            <div class="inline-flex items-center gap-1 bg-[#FAF7EE] text-stone-900 px-2.5 py-0.5 rounded-full border border-stone-300/80 shadow-2xs backdrop-blur-xs">
+              <span class="text-[10px] font-bold truncate max-w-[85px]">${g.name}</span>
+              <span class="text-[9px] text-pine-800 font-black">${weightStr}</span>
+            </div>
           </div>
         </div>
       `;
     }).join('');
+
+    container.style.height = `${Math.max(560, maxY + 180)}px`;
+    container.innerHTML = htmlCards;
+
+    // 绑定自由拖拽与点击事件
+    attachStickerDragEvents(container);
+    saveStickerPositions();
+
+    // 掉落动画完成后清理 dropping class，保证后续拖拽绝对跟手
+    if (isTriggerDrop) {
+      setTimeout(() => {
+        container.querySelectorAll('.sticker-entity.dropping').forEach(el => {
+          el.classList.remove('dropping');
+        });
+      }, state.gears.length * 80 + 700);
+    }
   }
 }
 
-// 打开贴纸详情弹窗 (点击即可查看)
+// 自由拖拽交互引擎：支持触屏 Touch 与鼠标 Pointer
+function attachStickerDragEvents(container) {
+  const stickers = container.querySelectorAll('.sticker-entity');
+  
+  stickers.forEach((el) => {
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button && e.button !== 0) return; // 仅处理主按键或单指
+      
+      const gearId = el.dataset.id;
+      const pos = state.positions[gearId];
+      if (!pos) return;
+
+      e.preventDefault();
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (err) {}
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const initialPosX = pos.x;
+      const initialPosY = pos.y;
+      const initialRot = pos.rot;
+
+      let hasMoved = false;
+      let lastClientX = startX;
+
+      // 抬起到最顶层
+      state.maxZIndex = (state.maxZIndex || 20) + 1;
+      pos.zIndex = state.maxZIndex;
+      el.style.zIndex = pos.zIndex;
+
+      // 拾起立体悬浮效果
+      el.classList.remove('dropping', 'settling');
+      el.classList.add('dragging');
+
+      function onPointerMove(moveEvent) {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+
+        if (!hasMoved && Math.hypot(dx, dy) > 4) {
+          hasMoved = true;
+        }
+
+        if (hasMoved) {
+          const container = document.getElementById('stickers-container');
+          const maxDragX = Math.max(160, (container?.clientWidth || 340) - 146);
+
+          // 严格将贴纸限制在垫子框范围内，绝不脱离框
+          pos.x = Math.max(6, Math.min(maxDragX, Math.round(initialPosX + dx)));
+          pos.y = Math.max(6, Math.round(initialPosY + dy));
+
+          // 依据拖动速度产生真实物理跟随微倾角
+          const vx = moveEvent.clientX - lastClientX;
+          lastClientX = moveEvent.clientX;
+          const tilt = Math.max(-14, Math.min(14, vx * 1.3));
+
+          el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) scale(1.1) rotate(${initialRot + tilt}deg)`;
+        }
+      }
+
+      function onPointerUp(upEvent) {
+        try {
+          el.releasePointerCapture(upEvent.pointerId);
+        } catch (err) {}
+
+        el.removeEventListener('pointermove', onPointerMove);
+        el.removeEventListener('pointerup', onPointerUp);
+        el.removeEventListener('pointercancel', onPointerUp);
+
+        el.classList.remove('dragging');
+
+        if (!hasMoved) {
+          // 点击：打开贴纸详情卡片
+          el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) scale(1) rotate(${pos.rot}deg)`;
+          openGearDetailModal(gearId);
+        } else {
+          // 拖拽释放：物理落地微弹并持久化位置
+          el.style.setProperty('--pos-x', `${pos.x}px`);
+          el.style.setProperty('--pos-y', `${pos.y}px`);
+          el.style.setProperty('--rot', `${pos.rot}deg`);
+          el.classList.add('settling');
+          el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) scale(1) rotate(${pos.rot}deg)`;
+
+          setTimeout(() => {
+            el.classList.remove('settling');
+          }, 280);
+
+          saveStickerPositions();
+        }
+      }
+
+      el.addEventListener('pointermove', onPointerMove);
+      el.addEventListener('pointerup', onPointerUp);
+      el.addEventListener('pointercancel', onPointerUp);
+    });
+  });
+}
+
+// 打开贴纸详情
 function openGearDetailModal(gearId) {
   const g = state.gears.find(item => item.id === gearId);
   if (!g) return;
 
   const modal = document.getElementById('modal-gear-detail');
   document.getElementById('detail-gear-name').textContent = g.name;
-  document.getElementById('detail-gear-brand').textContent = g.brand || '自选好物';
-  document.getElementById('detail-gear-cat').textContent = g.category_name || '未分类';
+  document.getElementById('detail-gear-brand').textContent = g.brand || '装备好物';
   document.getElementById('detail-gear-weight').textContent = g.weight_grams >= 1000 
     ? `${(g.weight_grams / 1000).toFixed(2)} kg` 
     : `${g.weight_grams} g`;
-  document.getElementById('detail-gear-desc').textContent = g.description || '无附加说明';
+
+  // 装备备注
+  const descWrap = document.getElementById('detail-gear-desc-wrap');
+  const descEl = document.getElementById('detail-gear-desc');
+  if (g.description && g.description.trim()) {
+    descEl.textContent = g.description;
+    descWrap.classList.remove('hidden');
+  } else {
+    descWrap.classList.add('hidden');
+  }
 
   const imgEl = document.getElementById('detail-gear-img');
   if (g.sticker_image_url) {
@@ -250,10 +439,9 @@ function openGearDetailModal(gearId) {
     imgEl.classList.add('hidden');
   }
 
-  // 绑定删除按钮
   const delBtn = document.getElementById('delete-gear-btn');
   delBtn.onclick = async () => {
-    if (confirm(`确定要从装备库移除 "${g.name}" 吗？`)) {
+    if (confirm(`确定要从装备垫撕下删除 "${g.name}" 吗？`)) {
       closeModal('modal-gear-detail');
       await apiRequest(`/gears/${g.id}`, { method: 'DELETE' });
       await loadGears();
@@ -263,118 +451,21 @@ function openGearDetailModal(gearId) {
   modal.classList.remove('hidden');
 }
 
-// 行程列表
-function renderTripsList() {
-  const container = document.getElementById('trips-list');
-  if (state.trips.length === 0) {
-    container.innerHTML = `
-      <div class="py-12 text-center text-stone-400">
-        <i class="fa-solid fa-mountain text-4xl mb-2 opacity-30 text-stone-500"></i>
-        <p class="text-xs font-bold text-stone-700">暂无行程安排</p>
-        <p class="text-[11px] text-stone-400 mt-0.5">点击右上角创建行程，挑选手账贴纸打包</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = state.trips.map(t => {
-    const s = t.stats || { total_items: 0, packed_items: 0, total_weight_grams: 0, base_weight_grams: 0 };
-    const progress = s.total_items === 0 ? 0 : Math.round((s.packed_items / s.total_items) * 100);
-    const baseKg = (s.base_weight_grams / 1000).toFixed(1);
-
-    return `
-      <div onclick="loadTripDetail('${t.id}')" class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-sm cursor-pointer hover:border-pine-800/40 transition space-y-2.5">
-        <div class="flex justify-between items-start">
-          <div>
-            <h4 class="text-sm font-bold text-stone-900">${t.title}</h4>
-            ${t.description ? `<p class="text-xs text-stone-500 mt-0.5 line-clamp-1">${t.description}</p>` : ''}
-          </div>
-          <span class="text-[10px] bg-pine-800/10 text-pine-800 font-bold px-2 py-0.5 rounded-full">
-            ${progress === 100 && s.total_items > 0 ? '已就绪 ✅' : '筹备中'}
-          </span>
-        </div>
-
-        <div>
-          <div class="flex justify-between text-[11px] text-stone-600 font-medium mb-1">
-            <span>打包进度: ${s.packed_items}/${s.total_items} 件</span>
-            <span class="text-pine-800 font-bold">基础重量: ${baseKg} kg</span>
-          </div>
-          <div class="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
-            <div class="bg-pine-800 h-full rounded-full transition-all duration-300" style="width: ${progress}%"></div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// 行程详情
-function renderTripDetail() {
-  const t = state.currentTripDetail;
-  if (!t) return;
-
-  document.getElementById('detail-trip-title').textContent = t.title;
-  document.getElementById('detail-trip-desc').textContent = t.description || '无附加路线说明';
-
-  const s = t.stats || { total_items: 0, packed_items: 0, total_weight_grams: 0, base_weight_grams: 0 };
-  document.getElementById('detail-packed-count').textContent = `${s.packed_items}/${s.total_items}`;
-  document.getElementById('detail-base-weight').textContent = `${(s.base_weight_grams / 1000).toFixed(1)} kg`;
-  document.getElementById('detail-total-weight').textContent = `${(s.total_weight_grams / 1000).toFixed(1)} kg`;
-
-  const container = document.getElementById('detail-items-list');
-  const items = t.items || [];
-
-  if (items.length === 0) {
-    container.innerHTML = `
-      <div class="py-12 text-center text-stone-400 bg-white rounded-2xl border border-dashed border-stone-200">
-        <i class="fa-solid fa-list-check text-3xl mb-2 opacity-30"></i>
-        <p class="text-xs">清单空空如也，点击右上角挑选手账贴纸加入</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = items.map(item => `
-    <div class="bg-white p-3 rounded-xl border border-stone-200/80 flex items-center justify-between shadow-2xs">
-      <div class="flex items-center space-x-3">
-        <input type="checkbox" ${item.is_packed ? 'checked' : ''} 
-          onchange="toggleItemPacked('${item.trip_item_id}', this.checked)"
-          class="w-4 h-4 text-pine-800 rounded border-stone-300 focus:ring-pine-800 cursor-pointer">
-        <div>
-          <p class="text-xs font-bold ${item.is_packed ? 'line-through text-stone-400' : 'text-stone-900'}">${item.gear_name}</p>
-          <p class="text-[10px] text-stone-500">${item.gear_brand || ''} · ${item.weight_grams}g</p>
-        </div>
-      </div>
-      <span class="text-[10px] font-bold ${item.is_packed ? 'text-pine-800 bg-pine-800/10' : 'text-stone-500 bg-stone-100'} px-2 py-0.5 rounded">
-        ${item.is_packed ? '已就绪 ✅' : '待整理 ⏳'}
-      </span>
-    </div>
-  `).join('');
-}
-
-async function toggleItemPacked(itemId, isPacked) {
-  await apiRequest(`/trips/${state.currentTripId}/items/${itemId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ is_packed: isPacked }),
-  });
-  state.currentTripDetail = await apiRequest(`/trips/${state.currentTripId}`);
-  renderTripDetail();
-  loadTrips();
-}
-
-// ======================== 贴纸工坊核心算法与自动压缩 ========================
+// ======================== 贴纸制作与极速压缩 ========================
 
 const canvas = document.getElementById('sticker-canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const strokeSlider = document.getElementById('stroke-slider');
 const strokeValText = document.getElementById('stroke-val');
 
-strokeSlider.addEventListener('input', (e) => {
-  strokeValText.textContent = `${e.target.value} px`;
-  if (state.currentImageSource) {
-    processSticker(state.currentImageSource, parseInt(e.target.value));
-  }
-});
+if (strokeSlider && strokeValText) {
+  strokeSlider.addEventListener('input', (e) => {
+    strokeValText.textContent = `${e.target.value} px`;
+    if (state.currentImageSource) {
+      processSticker(state.currentImageSource, parseInt(e.target.value));
+    }
+  });
+}
 
 document.getElementById('image-file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -386,7 +477,6 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
   reader.onload = (event) => {
     const rawImg = new Image();
     rawImg.onload = () => {
-      // 预压缩至最大 1200px
       const maxDim = 1200;
       let targetW = rawImg.width;
       let targetH = rawImg.height;
@@ -414,7 +504,8 @@ document.getElementById('image-file-input').addEventListener('change', (e) => {
         if (!nameInput.value || nameInput.value.includes('帐篷')) {
           nameInput.value = cleanName;
         }
-        processSticker(downsampledImg, parseInt(strokeSlider.value));
+        const defaultStroke = strokeSlider ? parseInt(strokeSlider.value) : 14;
+        processSticker(downsampledImg, defaultStroke);
       };
       downsampledImg.src = preCanvas.toDataURL('image/jpeg', 0.9);
     };
@@ -457,9 +548,9 @@ function loadGearPreset(type) {
 
     document.getElementById('maker-name').value = '云尚2 超轻双人帐篷';
     document.getElementById('maker-brand').value = 'Naturehike';
-    document.getElementById('maker-model').value = '20D 硅胶款';
     document.getElementById('maker-weight').value = '1250';
-    document.getElementById('maker-category').value = 'cat_shelter';
+    const desc = document.getElementById('maker-desc');
+    if (desc) desc.value = '20D硅胶款，超轻自立防大雨';
   } else if (type === 'pack') {
     sCtx.fillStyle = '#38bdf8';
     sCtx.roundRect(80, 70, 140, 180, 24);
@@ -475,9 +566,9 @@ function loadGearPreset(type) {
 
     document.getElementById('maker-name').value = 'Baltoro 65L 重装徒步包';
     document.getElementById('maker-brand').value = 'Gregory 格里高利';
-    document.getElementById('maker-model').value = 'Pro 65';
     document.getElementById('maker-weight').value = '2150';
-    document.getElementById('maker-category').value = 'cat_pack';
+    const desc = document.getElementById('maker-desc');
+    if (desc) desc.value = '重装长线徒步背负系统，舒适承重25kg';
   } else if (type === 'stove') {
     sCtx.fillStyle = '#f87171';
     sCtx.roundRect(100, 160, 100, 70, 16);
@@ -493,9 +584,9 @@ function loadGearPreset(type) {
 
     document.getElementById('maker-name').value = '风暴微型一体气炉';
     document.getElementById('maker-brand').value = 'SOTO';
-    document.getElementById('maker-model').value = 'SOD-310';
     document.getElementById('maker-weight').value = '67';
-    document.getElementById('maker-category').value = 'cat_cook';
+    const desc = document.getElementById('maker-desc');
+    if (desc) desc.value = '稳压直连气罐，高海拔低温防风';
   } else if (type === 'cup') {
     sCtx.fillStyle = '#94a3b8';
     sCtx.roundRect(90, 80, 120, 130, 14);
@@ -509,21 +600,21 @@ function loadGearPreset(type) {
 
     document.getElementById('maker-name').value = '450ml 单层钛金属露营杯';
     document.getElementById('maker-brand').value = 'Snow Peak';
-    document.getElementById('maker-model').value = 'MG-143';
     document.getElementById('maker-weight').value = '70';
-    document.getElementById('maker-category').value = 'cat_cook';
+    const desc = document.getElementById('maker-desc');
+    if (desc) desc.value = '超轻耐腐蚀，直火烧水，把手可折叠';
   }
 
   const img = new Image();
   img.onload = () => {
     state.currentImageSource = img;
-    processSticker(img, parseInt(strokeSlider.value));
+    processSticker(img, 14);
   };
   img.src = sampleCanvas.toDataURL();
 }
 
 function openMakerWithPreset() {
-  switchTab('maker');
+  switchView('maker');
   loadGearPreset('tent');
 }
 
@@ -658,10 +749,9 @@ async function compressAndTrimSticker(sourceCanvas, maxDimension = 800) {
 
 async function saveGearFromMaker() {
   const name = document.getElementById('maker-name').value.trim();
-  const categoryId = document.getElementById('maker-category').value;
   const weight = parseFloat(document.getElementById('maker-weight').value);
   const brand = document.getElementById('maker-brand').value.trim();
-  const model = document.getElementById('maker-model').value.trim();
+  const desc = (document.getElementById('maker-desc')?.value || '').trim();
 
   if (!name || isNaN(weight)) {
     alert('请填写装备名称与重量！');
@@ -670,7 +760,7 @@ async function saveGearFromMaker() {
 
   const btn = document.getElementById('save-gear-btn');
   btn.disabled = true;
-  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 压缩并上传至 Cloudflare...`;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在生成并压缩贴纸...`;
 
   try {
     const compressedBlob = await compressAndTrimSticker(canvas, 800);
@@ -683,135 +773,84 @@ async function saveGearFromMaker() {
       body: formData,
     });
 
-    await apiRequest('/gears', {
+    const categoryId = state.categories[0]?.id || 'cat_other';
+
+    const createdGear = await apiRequest('/gears', {
       method: 'POST',
       body: JSON.stringify({
         category_id: categoryId,
         name,
-        brand,
-        model,
+        brand: brand || '装备好物',
         weight_grams: weight,
-        description: '',
+        description: desc,
         sticker_image_url: uploadRes.url,
       }),
     });
 
-    await loadGears();
-    switchTab('closet');
+    // 为新生成的贴纸设置在装备收纳垫最正中上方的着陆点，准备触发大反弹掉落
+    if (createdGear && createdGear.id) {
+      const container = document.getElementById('stickers-container');
+      const trayWidth = container?.clientWidth || 340;
+      const targetX = Math.max(16, Math.round((trayWidth - 146) / 2));
+      state.positions[createdGear.id] = {
+        x: targetX,
+        y: 18,
+        rot: ORGANIC_ANGLES[Math.floor(Math.random() * ORGANIC_ANGLES.length)],
+        rotStart: -35,
+        zIndex: (state.maxZIndex || 20) + 5,
+      };
+      saveStickerPositions();
+    }
+
+    // 清空表单
+    document.getElementById('maker-name').value = '';
+    document.getElementById('maker-weight').value = '';
+    document.getElementById('maker-brand').value = '';
+    const descInput = document.getElementById('maker-desc');
+    if (descInput) descInput.value = '';
+
+    // 立刻切换回首页，并触发物理重力掉落特效！
+    switchView('closet');
+    await loadGears(true);
   } catch (e) {
     alert(`保存失败: ${e.message}`);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<i class="fa-solid fa-check"></i> 贴入装备柜`;
+    btn.innerHTML = `<i class="fa-solid fa-sparkles text-amber-300"></i> 生成贴纸并掉落到首页`;
   }
-}
-
-// 行程弹窗与添加
-function openCreateTripModal() {
-  document.getElementById('modal-create-trip').classList.remove('hidden');
-}
-
-async function submitCreateTrip() {
-  const title = document.getElementById('trip-modal-title').value.trim();
-  const desc = document.getElementById('trip-modal-desc').value.trim();
-  if (!title) return alert('请输入行程标题');
-
-  const now = Date.now();
-  await apiRequest('/trips', {
-    method: 'POST',
-    body: JSON.stringify({
-      title,
-      description: desc,
-      start_date: now,
-      end_date: now + 86400000 * 2,
-    }),
-  });
-
-  closeModal('modal-create-trip');
-  loadTrips();
-}
-
-function openAddGearToTripModal() {
-  const existingIds = new Set((state.currentTripDetail?.items || []).map(i => i.gear_id));
-  const available = state.gears.filter(g => !existingIds.has(g.id));
-
-  const listEl = document.getElementById('available-gears-list');
-  if (available.length === 0) {
-    listEl.innerHTML = `<p class="text-xs text-stone-500 text-center py-6">装备库中暂无新装备可添加</p>`;
-  } else {
-    listEl.innerHTML = available.map(g => `
-      <label class="flex items-center space-x-3 p-3 rounded-xl hover:bg-stone-50 border border-stone-200 cursor-pointer">
-        <input type="checkbox" value="${g.id}" class="gear-add-checkbox w-4 h-4 text-pine-800 rounded">
-        <div>
-          <p class="text-xs font-bold text-stone-900">${g.name}</p>
-          <p class="text-[10px] text-stone-500">${g.brand || ''} · ${g.weight_grams}g</p>
-        </div>
-      </label>
-    `).join('');
-  }
-
-  document.getElementById('modal-add-gear').classList.remove('hidden');
-}
-
-async function submitAddGearsToTrip() {
-  const checked = Array.from(document.querySelectorAll('.gear-add-checkbox:checked')).map(cb => cb.value);
-  if (checked.length === 0) return alert('请勾选装备');
-
-  await apiRequest(`/trips/${state.currentTripId}/items`, {
-    method: 'POST',
-    body: JSON.stringify({ gear_ids: checked }),
-  });
-
-  closeModal('modal-add-gear');
-  state.currentTripDetail = await apiRequest(`/trips/${state.currentTripId}`);
-  renderTripDetail();
-  loadTrips();
 }
 
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
 }
 
-// ======================== Tab 切换 ========================
-
-function switchTab(tab) {
-  state.activeTab = tab;
-  const views = ['closet', 'trips', 'maker', 'trip-detail'];
-  views.forEach(v => {
-    const el = document.getElementById(`view-${v}`);
-    if (el) el.classList.toggle('hidden', v !== tab);
-  });
-
-  // FAB 仅在装备贴纸墙显示
-  const fab = document.getElementById('fab-container');
-  if (fab) fab.classList.toggle('hidden', tab !== 'closet');
-
-  // 底栏在制作贴纸时隐藏，避免阻挡保存按钮
-  const dock = document.getElementById('dock-container');
-  if (dock) dock.classList.toggle('hidden', tab === 'maker');
-
-  // 回滚主视口到顶部
+// 视图切换：'closet' (贴纸墙) <-> 'maker' (做贴纸)
+function switchView(view) {
+  state.currentView = view;
+  const viewCloset = document.getElementById('view-closet');
+  const viewMaker = document.getElementById('view-maker');
+  const homeActionBar = document.getElementById('home-action-bar');
   const mainContent = document.getElementById('main-content');
-  if (mainContent) mainContent.scrollTop = 0;
 
-  const dockCloset = document.getElementById('dock-closet');
-  const dockTrips = document.getElementById('dock-trips');
-
-  if (tab === 'closet') {
-    dockCloset.className = 'flex items-center space-x-2 text-pine-800 font-black text-xs px-3 py-1.5 rounded-full bg-pine-800/10 transition';
-    dockTrips.className = 'flex items-center space-x-2 text-stone-500 hover:text-stone-900 font-bold text-xs px-3 py-1.5 rounded-full transition';
-  } else if (tab === 'trips' || tab === 'trip-detail') {
-    dockTrips.className = 'flex items-center space-x-2 text-pine-800 font-black text-xs px-3 py-1.5 rounded-full bg-pine-800/10 transition';
-    dockCloset.className = 'flex items-center space-x-2 text-stone-500 hover:text-stone-900 font-bold text-xs px-3 py-1.5 rounded-full transition';
+  if (view === 'closet') {
+    viewCloset.classList.remove('hidden');
+    viewMaker.classList.add('hidden');
+    homeActionBar.classList.remove('hidden');
+  } else {
+    viewCloset.classList.add('hidden');
+    viewMaker.classList.remove('hidden');
+    homeActionBar.classList.add('hidden');
   }
+
+  if (mainContent) mainContent.scrollTop = 0;
 }
 
 // 初始化启动
 async function bootstrap() {
+  loadSavedPositions();
   await initAuth();
   await loadCategories();
-  await loadGears();
-  await loadTrips();
+  await loadGears(true); // 首次进入桌面时，贴纸带着重力感与弹性质感从空中掉落
 }
 
 bootstrap();

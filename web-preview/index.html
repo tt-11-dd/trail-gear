@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Trail Gear — 贴纸装备墙</title>
+  <title>Trail Gear — 贴纸装备柜</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
@@ -38,7 +38,7 @@
     }
     .phone-container {
       width: 100%;
-      max-width: 416px;
+      max-width: 414px;
       height: 870px;
       max-height: 96vh;
       border-radius: 46px;
@@ -58,23 +58,96 @@
       background-size: 20px 20px;
       min-height: 100%;
     }
-    /* 贴纸平滑物理过渡 */
-    .sticker-item {
-      transition: transform 0.45s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.3s ease, left 0.4s ease, top 0.4s ease;
+
+    /* 贴纸从上方掉落到营地垫的重力弹性质感 */
+    @keyframes stickerDrop {
+      0% {
+        opacity: 0;
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) - 240px), 0) scale(0.65) rotate(var(--rot-start, -15deg));
+        filter: drop-shadow(0 35px 25px rgba(20, 15, 10, 0.12));
+      }
+      60% {
+        opacity: 1;
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) + 15px), 0) scale(1.08) rotate(calc(var(--rot, 0deg) + 3deg));
+        filter: drop-shadow(0 6px 10px rgba(20, 15, 10, 0.22));
+      }
+      80% {
+        transform: translate3d(var(--pos-x, 0px), calc(var(--pos-y, 0px) - 6px), 0) scale(0.97) rotate(calc(var(--rot, 0deg) - 1.5deg));
+        filter: drop-shadow(0 14px 18px rgba(20, 15, 10, 0.16));
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) scale(1) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 8px 16px rgba(20, 15, 10, 0.16));
+      }
+    }
+
+    /* 贴纸拖拽释放后的安放微弹 */
+    @keyframes stickerSettle {
+      0% {
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) scale(1.1) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 22px 26px rgba(20, 15, 10, 0.26));
+      }
+      50% {
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) scale(0.96) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 5px 8px rgba(20, 15, 10, 0.20));
+      }
+      100% {
+        transform: translate3d(var(--pos-x, 0px), var(--pos-y, 0px), 0) scale(1) rotate(var(--rot, 0deg));
+        filter: drop-shadow(0 8px 16px rgba(20, 15, 10, 0.16));
+      }
+    }
+
+    /* 随性散落桌面 */
+    .scattered-board {
+      position: relative;
+      width: 100%;
+      min-height: 560px;
+      touch-action: pan-y;
+    }
+
+    /* 贴纸实体 (支持掉落与自由拖动) */
+    .sticker-entity {
+      position: absolute;
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      transform-origin: center center;
+      will-change: transform, filter;
+    }
+
+    .sticker-entity.dropping {
+      animation: stickerDrop 0.65s cubic-bezier(0.2, 1.25, 0.4, 1) both;
+      animation-delay: calc(var(--delay, 0) * 80ms);
+    }
+
+    .sticker-entity.settling {
+      animation: stickerSettle 0.26s cubic-bezier(0.2, 1.3, 0.4, 1) forwards;
+    }
+
+    /* 拖拽时的悬浮立体光影 */
+    .sticker-entity.dragging {
+      cursor: grabbing !important;
+      z-index: 9999 !important;
+      filter: drop-shadow(0 28px 34px rgba(20, 15, 10, 0.32)) !important;
+      transition: filter 0.15s ease-out;
+      pointer-events: auto;
+    }
+
+    /* 一键整理网格模式 */
+    .grid-view-item {
+      transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.3s ease;
       cursor: pointer;
-      will-change: transform;
     }
-    .sticker-item:hover {
-      transform: scale(1.12) rotate(0deg) !important;
-      z-index: 50 !important;
-      filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.22)) !important;
+    .grid-view-item:hover {
+      transform: translateY(-3px) scale(1.02);
     }
-    .sticker-item:active {
-      transform: scale(0.96) !important;
+    .grid-view-item:active {
+      transform: scale(0.96);
     }
-    /* 浮动半透明玻璃栏 */
     .frosted-glass {
-      background: rgba(244, 240, 232, 0.88);
+      background: rgba(244, 240, 232, 0.9);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
@@ -103,17 +176,17 @@
       </div>
     </div>
 
-    <!-- 极简主页顶栏：简练、干净、直奔主题 -->
+    <!-- 极简主页顶栏：简练、直奔主题 -->
     <header class="px-6 py-2.5 frosted-glass border-b border-stone-200/60 z-20 flex justify-between items-center">
       <div>
         <div class="flex items-center space-x-1.5">
           <span class="text-base font-black text-stone-900 tracking-tight">TRAIL GEAR</span>
           <span class="text-[10px] font-bold bg-pine-800/10 text-pine-800 px-2 py-0.5 rounded-full" id="stat-count-pill">0 件</span>
         </div>
-        <p class="text-[11px] text-stone-500 font-medium" id="stat-weight-text">负重 0.0 kg</p>
+        <p class="text-[11px] text-stone-500 font-medium" id="stat-weight-text">总负重 0.0 kg</p>
       </div>
 
-      <!-- 核心功能控制：一键整理 / 随性散落 -->
+      <!-- 核心控制：一键整理 / 随性散落 -->
       <div class="flex items-center space-x-1.5">
         <button id="toggle-layout-btn" onclick="toggleLayoutMode()" 
           class="bg-white hover:bg-stone-50 text-stone-800 text-xs font-bold px-3 py-1.5 rounded-full border border-stone-300 shadow-sm flex items-center gap-1.5 transition active:scale-95">
@@ -128,99 +201,70 @@
       </div>
     </header>
 
-    <!-- 主展示区：主页就是贴纸画布！ -->
+    <!-- 主展示区：主页即贴纸展示墙 -->
     <main class="flex-1 overflow-y-auto no-scrollbar relative sticker-board" id="main-content">
       
-      <!-- ================= 页面 1：贴纸主画布 (随机平铺 / 整理对齐) ================= -->
-      <section id="view-closet" class="p-4 min-h-full block">
-        <!-- 贴纸容器（支持散落流动布局与整齐网格布局自由切换） -->
-        <div id="stickers-container" class="relative transition-all duration-500 min-h-[560px]">
-          <!-- 动态注入贴纸元素 -->
+      <!-- ================= 页面 1：贴纸展示墙 (核心主页) ================= -->
+      <section id="view-closet" class="p-3 pb-24 min-h-full block">
+        <!-- 桌面提示与状态 -->
+        <div class="flex items-center justify-between text-[11px] text-stone-500 font-medium px-1 mb-2 select-none" id="closet-sub-bar">
+          <span class="flex items-center gap-1.5 text-stone-700 font-bold">
+            <i class="fa-solid fa-hand-pointer text-[10px] text-pine-800"></i>
+            <span id="closet-hint-text">拖动贴纸随意摆放 · 点击查看详情</span>
+          </span>
+          <span class="text-[10px] bg-stone-200/80 text-stone-600 px-2.5 py-0.5 rounded-full font-bold" id="closet-mode-tag">
+            随性散落
+          </span>
         </div>
-      </section>
 
-      <!-- ================= 页面 2：行程清单 (简单便捷) ================= -->
-      <section id="view-trips" class="p-4 space-y-3.5 hidden">
-        <div class="flex justify-between items-center px-1">
-          <div>
-            <h2 class="text-sm font-black text-stone-900">行程打包清单</h2>
-            <p class="text-[11px] text-stone-500">挑选装备，出发前逐项核对</p>
+        <!-- 营地装备收纳垫框 (Bounded Camp Mat Frame) -->
+        <div id="camp-mat-frame" class="relative rounded-[30px] bg-[#F6F2EA] border-2 border-dashed border-stone-300/80 p-3 shadow-inner min-h-[550px] overflow-hidden transition-all">
+          <!-- 垫子顶部状态线 -->
+          <div class="flex justify-between items-center text-[10px] font-mono text-stone-400 select-none pb-2 border-b border-stone-200/60 mb-2">
+            <span class="flex items-center gap-1.5 font-bold tracking-wider text-stone-600">
+              <i class="fa-solid fa-rug text-pine-800"></i> 装备收纳垫 · GEAR MAT
+            </span>
+            <span id="tray-stat-pill" class="bg-stone-200/80 text-stone-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+              0 件贴纸
+            </span>
           </div>
-          <button onclick="openCreateTripModal()" class="text-xs bg-pine-800 hover:bg-pine-900 text-white font-bold px-3.5 py-1.5 rounded-full shadow-sm flex items-center gap-1">
-            <i class="fa-solid fa-plus text-[10px]"></i> 新建行程
-          </button>
-        </div>
 
-        <div class="space-y-3" id="trips-list">
-          <!-- 动态插入行程卡片 -->
-        </div>
-      </section>
+          <!-- 贴纸物理容器 (严格约束在垫子框内) -->
+          <div id="stickers-container" class="relative w-full min-h-[480px]">
+            <!-- 动态注入贴纸元素 -->
+          </div>
 
-      <!-- ================= 页面 3：行程详情清单 ================= -->
-      <section id="view-trip-detail" class="p-4 space-y-3 hidden">
-        <div class="flex items-center justify-between pb-1">
-          <button onclick="switchTab('trips')" class="text-xs text-pine-800 font-bold flex items-center gap-1.5 hover:underline">
-            <i class="fa-solid fa-chevron-left text-[10px]"></i> 返回行程列表
-          </button>
-          <span class="text-[10px] bg-pine-800/10 text-pine-800 font-bold px-2.5 py-0.5 rounded-full" id="detail-trip-status">筹备中</span>
-        </div>
-
-        <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-sm space-y-2">
-          <h2 class="text-base font-black text-stone-900" id="detail-trip-title">行程标题</h2>
-          <p class="text-xs text-stone-500" id="detail-trip-desc">行程描述</p>
-          
-          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100 text-center">
-            <div>
-              <p class="text-[10px] text-stone-400">已打包</p>
-              <p class="text-base font-bold text-stone-800" id="detail-packed-count">0/0 件</p>
-            </div>
-            <div>
-              <p class="text-[10px] text-stone-400">基础重量</p>
-              <p class="text-base font-bold text-pine-800" id="detail-base-weight">0.0 kg</p>
-            </div>
-            <div>
-              <p class="text-[10px] text-stone-400">总重量</p>
-              <p class="text-base font-bold text-stone-800" id="detail-total-weight">0.0 kg</p>
-            </div>
+          <!-- 框内底部微水印 -->
+          <div class="pt-3 pb-1 text-center pointer-events-none select-none border-t border-stone-200/40 mt-3">
+            <span class="text-[9px] font-mono tracking-widest text-stone-400 uppercase opacity-60">TRAIL GEAR · CAMPING MAT ZONE</span>
           </div>
         </div>
-
-        <div class="flex justify-between items-center px-1 pt-1">
-          <h3 class="text-xs font-bold text-stone-800">打包核对清单</h3>
-          <button onclick="openAddGearToTripModal()" class="text-xs text-pine-800 font-bold hover:underline flex items-center gap-1">
-            <i class="fa-solid fa-plus text-[10px]"></i> 从装备库挑选
-          </button>
-        </div>
-
-        <div class="space-y-2" id="detail-items-list">
-          <!-- 动态明细 -->
-        </div>
       </section>
 
-      <!-- ================= 页面 4：制作贴纸工坊 ================= -->
-      <section id="view-maker" class="p-4 pb-28 space-y-3.5 hidden">
+      <!-- ================= 页面 2：拍照做贴纸工坊 (极简 4 字段流程) ================= -->
+      <section id="view-maker" class="p-4 pb-28 space-y-3 hidden">
         <div class="flex items-center justify-between pb-1">
           <div>
             <h2 class="text-base font-black text-stone-900 flex items-center gap-1.5">
               <i class="fa-solid fa-camera text-pine-800"></i> 拍照做贴纸
             </h2>
-            <p class="text-[11px] text-stone-500">上传照片自动压缩并生成白色贴纸</p>
+            <p class="text-[11px] text-stone-500">上传照片填写 4 项信息，一键掉落到装备垫</p>
           </div>
-          <button onclick="switchTab('closet')" class="w-8 h-8 rounded-full bg-stone-200/90 text-stone-700 flex items-center justify-center hover:bg-stone-300 text-sm shadow-xs transition" title="返回贴纸墙">
+          <button onclick="switchView('closet')" class="w-8 h-8 rounded-full bg-stone-200/90 text-stone-700 flex items-center justify-center hover:bg-stone-300 text-sm shadow-xs transition" title="返回贴纸墙">
             <i class="fa-solid fa-xmark text-base"></i>
           </button>
         </div>
 
         <!-- 贴纸预览画布 -->
-        <div class="w-full h-52 bg-white border-2 border-dashed border-stone-300 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-sm cursor-pointer" onclick="document.getElementById('image-file-input').click()">
+        <div class="w-full h-48 bg-white border-2 border-dashed border-stone-300 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden shadow-sm cursor-pointer" onclick="document.getElementById('image-file-input').click()">
           <canvas id="sticker-canvas" class="max-h-full max-w-full object-contain hidden"></canvas>
           
           <div id="upload-placeholder" class="text-center p-6">
-            <div class="w-14 h-14 bg-stone-100 text-pine-800 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
-              <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+            <div class="w-14 h-14 bg-stone-100 text-pine-800 rounded-2xl flex items-center justify-center mx-auto mb-2.5 shadow-sm">
+              <i class="fa-solid fa-camera text-2xl"></i>
             </div>
-            <p class="text-sm font-bold text-stone-900">点击上传或拍照</p>
-            <p class="text-[11px] text-stone-500 mt-1">智能去除背景并生成白色描边贴纸</p>
+            <p class="text-sm font-bold text-stone-900">点击拍照或上传图片</p>
+            <p class="text-[11px] text-stone-500 mt-0.5">自动抠除背景并生成白色贴纸描边</p>
           </div>
 
           <div id="change-photo-badge" class="absolute bottom-2.5 right-2.5 bg-stone-900/80 text-white text-[10px] font-bold px-3 py-1 rounded-full backdrop-blur-sm hidden flex items-center gap-1 shadow-sm">
@@ -232,7 +276,7 @@
         <!-- 快捷试用示例 -->
         <div class="flex items-center justify-between text-xs px-1">
           <button type="button" onclick="document.getElementById('image-file-input').click()" 
-            class="bg-white hover:bg-stone-50 text-stone-900 font-bold px-3 py-1.5 rounded-xl border border-stone-300 flex items-center gap-1.5 shadow-sm">
+            class="bg-white hover:bg-stone-50 text-stone-900 font-bold px-3 py-1.5 rounded-xl border border-stone-300 flex items-center gap-1.5 shadow-sm text-xs">
             <i class="fa-solid fa-image text-pine-800"></i> 本地相册
           </button>
           
@@ -245,94 +289,61 @@
           </div>
         </div>
 
-        <!-- 压缩与白边设置 -->
-        <div class="bg-white p-3.5 rounded-2xl border border-stone-200/80 shadow-sm space-y-2.5">
-          <div class="flex justify-between items-center text-xs font-bold text-stone-800">
-            <span>贴纸白边厚度</span>
-            <span id="stroke-val" class="text-pine-800 font-bold">14 px</span>
-          </div>
-          <input type="range" id="stroke-slider" min="4" max="28" value="14" class="w-full accent-pine-800 cursor-pointer">
-
-          <div class="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
-            <span id="compress-info-text">自动压缩：裁剪边缘 + 限制 800px 极速上传</span>
-            <span id="compress-size-pill" class="text-pine-800 font-bold bg-pine-800/10 px-2 py-0.5 rounded">
-              省流 92%
-            </span>
-          </div>
-        </div>
-
-        <!-- 表单 -->
+        <!-- 极简 4 字段表单：名称、重量、品牌、备注 -->
         <div class="bg-white p-4 rounded-2xl border border-stone-200/80 shadow-sm space-y-3">
+          <!-- 1. 装备名称 -->
           <div>
-            <label class="block text-xs font-bold text-stone-700 mb-1">装备名称 *</label>
+            <label class="block text-xs font-bold text-stone-800 mb-1">装备名称 <span class="text-clay-500">*</span></label>
             <input type="text" id="maker-name" placeholder="如：胡巴 双人帐篷" 
-              class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
+              class="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
           </div>
 
+          <!-- 2. 重量 & 3. 品牌 -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-bold text-stone-700 mb-1">分类 *</label>
-              <select id="maker-category" class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
-              </select>
+              <label class="block text-xs font-bold text-stone-800 mb-1">重量 (克 g) <span class="text-clay-500">*</span></label>
+              <input type="number" id="maker-weight" placeholder="如：1350" 
+                class="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
             </div>
             <div>
-              <label class="block text-xs font-bold text-stone-700 mb-1">重量 (克 g) *</label>
-              <input type="number" id="maker-weight" placeholder="1350" 
-                class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
+              <label class="block text-xs font-bold text-stone-800 mb-1">品牌 <span class="text-stone-400 font-normal">(选填)</span></label>
+              <input type="text" id="maker-brand" placeholder="如：MSR" 
+                class="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-stone-700 mb-1">品牌</label>
-              <input type="text" id="maker-brand" placeholder="MSR" 
-                class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-stone-700 mb-1">型号</label>
-              <input type="text" id="maker-model" placeholder="NX 2P" 
-                class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
-            </div>
+          <!-- 4. 备注 -->
+          <div>
+            <label class="block text-xs font-bold text-stone-800 mb-1">备注 <span class="text-stone-400 font-normal">(选填)</span></label>
+            <input type="text" id="maker-desc" placeholder="如：防风抗暴雨、三人四季温带使用" 
+              class="w-full px-3.5 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:border-pine-800">
           </div>
         </div>
 
-        <!-- 常驻底部提交栏 (永远吸底、无需找寻、决不遮挡) -->
+        <!-- 提交按钮：直接一个特效掉落在首页 -->
         <div class="sticky bottom-2 inset-x-0 pt-2 z-40">
-          <div class="bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-stone-300/80 shadow-xl flex space-x-2">
-            <button type="button" onclick="switchTab('closet')" 
-              class="px-4 py-3 text-xs font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-xl transition">
-              取消
-            </button>
-            <button id="save-gear-btn" onclick="saveGearFromMaker()" 
-              class="flex-1 py-3 bg-pine-800 hover:bg-pine-900 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-98">
-              <i class="fa-solid fa-check"></i> 保存并贴入装备柜
-            </button>
-          </div>
+          <button id="save-gear-btn" onclick="saveGearFromMaker()" 
+            class="w-full py-3.5 bg-stone-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl transition flex items-center justify-center gap-2 active:scale-98 border border-stone-700">
+            <i class="fa-solid fa-sparkles text-amber-300"></i> 生成贴纸并掉落到首页
+          </button>
         </div>
       </section>
     </main>
 
-    <!-- 底部悬浮快捷拍照做贴纸 FAB (随处一点即做) -->
-    <div id="fab-container" class="absolute bottom-20 right-5 z-40">
+    <!-- 高定质感悬浮按钮：拍照做贴纸 (深色钛金快门胶囊) -->
+    <div id="home-action-bar" class="absolute bottom-6 inset-x-0 flex justify-center z-30 pointer-events-none">
       <button onclick="openMakerWithPreset()" 
-        class="bg-pine-800 hover:bg-pine-900 text-white font-bold px-4 py-3 rounded-full shadow-xl flex items-center gap-2 transition transform hover:scale-105 active:scale-95">
-        <i class="fa-solid fa-camera text-base"></i>
-        <span class="text-xs tracking-wide">做贴纸</span>
+        class="group pointer-events-auto flex items-center gap-3 pl-3.5 pr-6 py-2.5 rounded-full bg-stone-900/95 hover:bg-black text-white shadow-[0_16px_36px_-6px_rgba(25,20,15,0.35)] border border-stone-700/60 backdrop-blur-xl transition-all duration-300 transform hover:scale-[1.03] active:scale-95">
+        <!-- 镜头快门微动标 -->
+        <span class="w-8 h-8 rounded-full bg-gradient-to-tr from-stone-800 to-stone-700 border border-stone-500/40 flex items-center justify-center text-amber-200/90 shadow-inner group-hover:rotate-45 transition-transform duration-500">
+          <i class="fa-solid fa-camera text-xs"></i>
+        </span>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-black tracking-widest text-stone-100 uppercase">拍照做贴纸</span>
+          <span class="text-[8.5px] text-stone-400 font-mono tracking-wider -mt-0.5">CAMERA TO STICKER</span>
+        </div>
+        <i class="fa-solid fa-arrow-right text-[10px] text-stone-400 group-hover:text-white transition-colors ml-0.5"></i>
       </button>
-    </div>
-
-    <!-- 底部悬浮双键极简底栏：【贴纸墙】与【打包清单】 -->
-    <div id="dock-container" class="absolute bottom-5 inset-x-0 flex justify-center z-30 pointer-events-none">
-      <nav class="bg-white/90 backdrop-blur-xl border border-stone-300/80 rounded-full px-4 py-2 flex items-center space-x-6 shadow-xl pointer-events-auto">
-        <button onclick="switchTab('closet')" id="dock-closet" class="flex items-center space-x-2 text-pine-800 font-black text-xs px-3 py-1.5 rounded-full bg-pine-800/10 transition">
-          <i class="fa-solid fa-layer-group text-sm"></i>
-          <span>贴纸墙</span>
-        </button>
-        <button onclick="switchTab('trips')" id="dock-trips" class="flex items-center space-x-2 text-stone-500 hover:text-stone-900 font-bold text-xs px-3 py-1.5 rounded-full transition">
-          <i class="fa-solid fa-list-check text-sm"></i>
-          <span>打包清单</span>
-        </button>
-      </nav>
     </div>
 
   </div>
@@ -343,12 +354,12 @@
       <div class="w-10 h-1 bg-stone-300 rounded-full mx-auto -mt-2 mb-2"></div>
       
       <!-- 居中贴纸大图 -->
-      <div class="h-44 bg-stone-50 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden border border-stone-200/80">
+      <div class="h-48 bg-stone-50 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden border border-stone-200/80">
         <img id="detail-gear-img" src="" class="max-h-full max-w-full object-contain filter drop-shadow-xl" alt="">
       </div>
 
       <!-- 装备详情信息 -->
-      <div class="space-y-1">
+      <div class="space-y-2">
         <div class="flex justify-between items-start">
           <div>
             <p id="detail-gear-brand" class="text-xs font-bold text-clay-500 uppercase tracking-wider"></p>
@@ -356,56 +367,22 @@
           </div>
           <span id="detail-gear-weight" class="text-sm font-black text-pine-800 bg-pine-800/10 px-2.5 py-1 rounded-lg"></span>
         </div>
-        <p id="detail-gear-cat" class="text-xs text-stone-400 font-medium"></p>
-        <p id="detail-gear-desc" class="text-xs text-stone-600 pt-2"></p>
+
+        <!-- 备注展示 -->
+        <div id="detail-gear-desc-wrap" class="bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 hidden">
+          <p class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">装备备注</p>
+          <p id="detail-gear-desc" class="text-xs text-stone-700 leading-relaxed"></p>
+        </div>
       </div>
 
       <!-- 操作按钮 -->
       <div class="pt-2 flex space-x-2.5">
         <button id="delete-gear-btn" class="flex-1 py-3 text-xs text-red-600 font-bold bg-red-50 hover:bg-red-100 rounded-xl transition">
-          删除装备
+          从贴纸墙撕下删除
         </button>
         <button onclick="closeModal('modal-gear-detail')" class="flex-1 py-3 text-xs text-stone-700 font-bold bg-stone-100 hover:bg-stone-200 rounded-xl transition">
-          关闭
+          完成
         </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 创建行程模态弹窗 -->
-  <div id="modal-create-trip" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-sm p-6 space-y-4 rounded-3xl shadow-2xl">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-stone-900 text-base">⛺️ 创建新行程</h3>
-        <button onclick="closeModal('modal-create-trip')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-stone-700 mb-1">行程标题 *</label>
-        <input type="text" id="trip-modal-title" placeholder="如：雨崩神瀑两日徒步" class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl">
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-stone-700 mb-1">描述与备注</label>
-        <textarea id="trip-modal-desc" placeholder="路线、天气与重点装备备忘" rows="2" class="w-full px-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-xl"></textarea>
-      </div>
-      <div class="flex space-x-2 pt-2">
-        <button onclick="closeModal('modal-create-trip')" class="flex-1 py-2.5 text-sm text-stone-600 bg-stone-100 rounded-xl font-bold">取消</button>
-        <button onclick="submitCreateTrip()" class="flex-1 py-2.5 text-sm text-white bg-pine-800 hover:bg-pine-900 rounded-xl font-bold shadow-sm">创建行程</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 挑选装备加入清单弹窗 -->
-  <div id="modal-add-gear" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-sm max-h-[80vh] flex flex-col p-6 rounded-3xl shadow-2xl">
-      <div class="flex justify-between items-center pb-3 border-b border-stone-100">
-        <h3 class="font-bold text-stone-900 text-base">从贴纸库挑选装备</h3>
-        <button onclick="closeModal('modal-add-gear')" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="flex-1 overflow-y-auto py-3 space-y-2 no-scrollbar" id="available-gears-list">
-      </div>
-      <div class="pt-3 border-t border-stone-100 flex space-x-2">
-        <button onclick="closeModal('modal-add-gear')" class="flex-1 py-2.5 text-sm text-stone-600 bg-stone-100 rounded-xl font-bold">取消</button>
-        <button onclick="submitAddGearsToTrip()" class="flex-1 py-2.5 text-sm text-white bg-pine-800 hover:bg-pine-900 rounded-xl font-bold shadow-sm">加入清单</button>
       </div>
     </div>
   </div>
