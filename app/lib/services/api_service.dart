@@ -7,7 +7,7 @@ import '../models/trip.dart';
 import '../models/user.dart';
 
 class ApiService {
-  static const String defaultBaseUrl = 'https://trail-gear-api.liuziting.workers.dev/api/v1';
+  static const String defaultBaseUrl = 'https://gear.tether-code.xyz/api/v1';
   final Dio _dio = Dio();
   String? _token;
 

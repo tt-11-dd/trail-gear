@@ -1,5 +1,5 @@
 // Trail Gear — 纯粹贴纸主页交互引擎 (拍照 -> 生成贴纸 -> 展示)
-const API_BASE = 'https://trail-gear-api.liuziting.workers.dev/api/v1';
+const API_BASE = 'https://gear.tether-code.xyz/api/v1';
 
 let state = {
   token: null,
