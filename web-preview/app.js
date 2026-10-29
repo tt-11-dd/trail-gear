@@ -598,16 +598,22 @@ function takePhotoFromCamera() {
     let srcW = targetRect.width / scale;
     let srcH = targetRect.height / scale;
 
-    // 边界钳制
-    srcX = Math.max(0, Math.min(videoWidth - 10, srcX));
-    srcY = Math.max(0, Math.min(videoHeight - 10, srcY));
-    srcW = Math.max(50, Math.min(videoWidth - srcX, srcW));
-    srcH = Math.max(50, Math.min(videoHeight - srcY, srcH));
+    // 严格 1:1 正方形尺寸锁定 (居中正方形取样)
+    const squareSide = Math.min(srcW, srcH);
+    srcX += (srcW - squareSide) / 2;
+    srcY += (srcH - squareSide) / 2;
+    srcW = squareSide;
+    srcH = squareSide;
 
-    // 输出为高品质竖屏贴纸原图 (宽高比严密匹配取景准星竖框)
+    // 边界安全钳制
+    srcX = Math.max(0, Math.min(videoWidth - srcW, srcX));
+    srcY = Math.max(0, Math.min(videoHeight - srcH, srcY));
+
+    // 输出为高品质 1:1 正方形贴纸原图 (720x720 纯正方形)
+    const squareDim = 720;
     const capCanvas = document.createElement('canvas');
-    capCanvas.width = 640;
-    capCanvas.height = Math.round(640 * (srcH / srcW));
+    capCanvas.width = squareDim;
+    capCanvas.height = squareDim;
     const capCtx = capCanvas.getContext('2d');
 
     // 若为前置镜头自拍，水平镜像以与取景器预览完全一致
@@ -616,7 +622,7 @@ function takePhotoFromCamera() {
       capCtx.scale(-1, 1);
     }
 
-    capCtx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, capCanvas.width, capCanvas.height);
+    capCtx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, squareDim, squareDim);
 
     const capturedImg = new Image();
     capturedImg.onload = () => {
